@@ -8,9 +8,22 @@ lucide.createIcons();
 let socket = null;
 let lastStatusTs = null;
 let freshnessTimer = null;
-let estopActive = false;
 
 const STALE_MS = 3000; // matches schema's freshness rule: now - ts > 3000ms => stale
+
+// Every control that actually commands the platform — disabled until a device
+// is connected, so these are never just decorative UI.
+const CONTROL_IDS = [
+    'btn-start', 'btn-stop', 'btn-forward', 'btn-left', 'btn-right',
+    'btn-backward', 'btn-brake', 'btn-estop', 'slider-speed'
+];
+
+function setControlsEnabled(enabled) {
+    CONTROL_IDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = !enabled;
+    });
+}
 
 // ---------- Connection ----------
 
@@ -23,6 +36,7 @@ function connectPlatformStream() {
     }
 
     setConnectionStatus('CONNECTING');
+    setControlsEnabled(false);
     logStatus(`Connecting to ${url} ...`);
 
     try {
@@ -35,12 +49,14 @@ function connectPlatformStream() {
 
     socket.onopen = () => {
         setConnectionStatus('ONLINE');
+        setControlsEnabled(true);
         logStatus('Socket open. Awaiting platform_status frames...');
         startFreshnessWatch();
     };
 
     socket.onclose = () => {
         setConnectionStatus('OFFLINE');
+        setControlsEnabled(false);
         logStatus('Socket closed.');
         stopFreshnessWatch();
     };
@@ -66,7 +82,8 @@ function connectPlatformStream() {
 
 function setConnectionStatus(state) {
     const el = document.getElementById('connection-status');
-    el.textContent = state;
+    const labels = { ONLINE: '🟢 ONLINE', CONNECTING: '🟡 CONNECTING', OFFLINE: '🔴 OFFLINE' };
+    el.textContent = labels[state] || state;
     el.className = 'font-mono font-bold ' +
         (state === 'ONLINE' ? 'text-emerald-500' :
          state === 'CONNECTING' ? 'text-amber-500' : 'text-rose-500');
@@ -104,11 +121,26 @@ function sendForward() {
     sendCommand('forward', { target_speed_kmh: val });
 }
 
+function sendSteer(direction) {
+    // NOTE: "left"/"right" (and "start", below) are not yet in MESSAGE_SCHEMA.md
+    // — using the same verb-style action pattern as forward/stop/brake until the
+    // team lead adds an official entry (and the firmware agrees on it).
+    sendCommand(direction);
+    flashSteerButton(direction);
+}
+
+function flashSteerButton(direction) {
+    const btn = document.getElementById(direction === 'left' ? 'btn-left' : 'btn-right');
+    btn.classList.add('border-blue-400', 'bg-blue-500/20');
+    setTimeout(() => btn.classList.remove('border-blue-400', 'bg-blue-500/20'), 250);
+}
+
 function sendEstop() {
+    // Official schema action — see MESSAGE_SCHEMA.md section 4:
+    // "estop always wins... stays stopped until a fresh forward."
     sendCommand('estop');
-    estopActive = true;
-    flashEstop();
     setDriveStateVisual('ESTOP');
+    flashEstop();
 }
 
 function flashEstop() {
@@ -117,23 +149,10 @@ function flashEstop() {
     setTimeout(() => btn.classList.remove('estop-pulse'), 1000);
 }
 
-// Rewire the Forward button (declared inline in HTML calls sendCommand('forward'),
-// but we want the target speed attached — patch it here after DOM is ready)
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('btn-forward').setAttribute('onclick', 'sendForward()');
-});
-
 // ---------- Inbound platform_status ----------
 
 function handlePlatformStatus(msg) {
     lastStatusTs = msg.ts || Date.now();
-
-    // Safety rule from schema: estop always wins, stays stopped until fresh forward.
-    // Reflect that in the UI by clearing local estopActive flag once firmware reports
-    // it has left ESTOP state (i.e. a forward was accepted).
-    if (msg.drive_state && msg.drive_state !== 'ESTOP') {
-        estopActive = false;
-    }
 
     setDriveStateVisual(msg.drive_state);
     setAvoidanceBanner(msg.avoidance_state);
@@ -183,9 +202,9 @@ function setAvoidanceBanner(state) {
     const icon = document.getElementById('avoidance-icon');
 
     const map = {
-        CLEAR:   { label: 'CLEAR',   bg: 'bg-emerald-500/10 border-emerald-500/30', txt: 'text-emerald-400', ic: 'shield-check' },
-        SLOWING: { label: 'SLOWING', bg: 'bg-amber-500/10 border-amber-500/30',     txt: 'text-amber-400',   ic: 'shield-alert' },
-        BRAKING: { label: 'BRAKING', bg: 'bg-rose-500/10 border-rose-500/30',       txt: 'text-rose-400',    ic: 'shield-x' },
+        CLEAR:   { label: '✅ CLEAR',   bg: 'bg-emerald-500/10 border-emerald-500/30', txt: 'text-emerald-400', ic: 'shield-check' },
+        SLOWING: { label: '⚠️ SLOWING', bg: 'bg-amber-500/10 border-amber-500/30',     txt: 'text-amber-400',   ic: 'shield-alert' },
+        BRAKING: { label: '🛑 BRAKING', bg: 'bg-rose-500/10 border-rose-500/30',       txt: 'text-rose-400',    ic: 'shield-x' },
     };
     const cfg = map[state] || { label: 'UNKNOWN', bg: 'bg-slate-800/50 border-slate-800', txt: 'text-slate-400', ic: 'shield' };
 
@@ -218,10 +237,10 @@ function markFresh() {
     const label = document.getElementById('txt-freshness');
     if (age > STALE_MS) {
         dot.className = 'w-2 h-2 rounded-full bg-slate-600';
-        label.textContent = `stale (${Math.round(age / 1000)}s ago)`;
+        label.textContent = `⚪ stale (${Math.round(age / 1000)}s ago)`;
     } else {
         dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
-        label.textContent = 'live';
+        label.textContent = '🟢 live';
     }
 }
 
