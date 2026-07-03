@@ -19,7 +19,12 @@ on:
   pull_request:
     types: [closed]
     branches: [main]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Backfill a specific date (YYYY-MM-DD). Leave blank to run for today.'
+        required: false
+        type: string
 
 # Needed so the workflow can commit the updated report back to the repo.
 permissions:
@@ -47,16 +52,33 @@ jobs:
                                 # wrong commit.
           fetch-depth: 0        # full history is required -- the digest reads
                                 # the complete git log and filters it itself.
+          token: ${{ secrets.DIGEST_PUSH_TOKEN }}
+                                # The default GITHUB_TOKEN pushes as the
+                                # github-actions[bot] identity, which the
+                                # ruleset's role-based bypass list cannot
+                                # cover (bypass roles only recognize human
+                                # collaborators, and this org's plan doesn't
+                                # offer "GitHub Actions" as a bypass actor).
+                                # A personal access token belonging to a repo
+                                # admin makes the push count as that admin,
+                                # which the "Repository admin" bypass role
+                                # already covers.
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Generate today's digest
+      - name: Generate digest (today, or a backfilled date if provided)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 scripts/generate_daily_digest.py --tz Asia/Kolkata
+        run: |
+          if [ -n "${{ inputs.date }}" ]; then
+            echo "Backfilling ${{ inputs.date }}"
+            python3 scripts/generate_daily_digest.py --date "${{ inputs.date }}" --tz Asia/Kolkata
+          else
+            python3 scripts/generate_daily_digest.py --tz Asia/Kolkata
+          fi
 
       - name: Commit the updated report (if anything changed)
         run: |
