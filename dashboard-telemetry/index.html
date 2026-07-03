@@ -30,8 +30,11 @@
         </div>
         
         <div class="flex items-center gap-3">
-            <input type="text" id="ws-url" value="ws://192.168.1.100:81" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 font-mono focus:outline-none focus:border-blue-500 w-48" placeholder="ws://ESP32_IP:81">
+            <input type="text" id="ws-url" value="wss://api.nalusa.space/ws" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 font-mono focus:outline-none focus:border-blue-500 w-48" placeholder="wss://api.nalusa.space/ws">
             <button onclick="connectHardwareStream()" id="btn-connect" class="bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs px-4 py-2 rounded-lg transition">Connect Stream</button>
+            <button onclick="openHistoryModal()" id="btn-history" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs px-4 py-2 rounded-lg transition flex items-center gap-1.5">
+                <i data-lucide="history" class="w-3.5 h-3.5"></i> History
+            </button>
         </div>
     </header>
 
@@ -106,7 +109,7 @@
                     <span class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                         <i data-lucide="activity" class="w-4 h-4 text-emerald-500"></i> Engine Health
                     </span>
-                    <span id="badge-dtc" class="px-2.5 py-1 text-[10px] font-bold rounded-full bg-slate-800 text-slate-500 border border-slate-700">0 DTC</span>
+                    <span id="badge-dtc" class="px-2.5 py-1 text-[10px] font-bold rounded-full bg-slate-800 text-slate-500 border border-slate-700">-- DTC</span>
                 </div>
                 <div class="grid grid-cols-3 gap-4 text-center">
                     <div>
@@ -178,15 +181,17 @@
                 </div>
             </div>
 
-            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-                <div class="flex justify-between items-center pb-3 border-b border-slate-800/60">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+                <div class="flex justify-between items-center">
                     <div class="flex items-center gap-3">
                         <i data-lucide="snowflake" class="w-5 h-5 text-sky-400"></i>
                         <span class="text-sm font-medium">Air Conditioning (AC)</span>
                     </div>
                     <span id="badge-ac" class="px-2.5 py-1 text-xs font-bold rounded-full bg-slate-800 text-slate-500 border border-slate-700">--</span>
                 </div>
+            </div>
 
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
                 <div class="space-y-2">
                     <label class="text-xs text-slate-400 font-medium block">Outbound Message Console (via SIM800L)</label>
                     <div class="flex gap-2">
@@ -205,6 +210,12 @@
             </h2>
 
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+                <div class="flex items-center justify-between">
+                    <span id="route-status" class="text-[10px] text-slate-500">Historical route not loaded</span>
+                    <button onclick="loadPastRoute()" id="btn-load-route" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold px-2.5 py-1 rounded-md transition flex items-center gap-1">
+                        <i data-lucide="route" class="w-3 h-3"></i> Load Past Route
+                    </button>
+                </div>
                 <div id="map-frame" class="w-full h-64 rounded-lg border border-slate-800 z-10"></div>
                 <div id="card-gps-readout" class="grid grid-cols-2 gap-2 bg-slate-950 p-3 rounded-lg border border-slate-800/80 font-mono text-[11px]">
                     <div>
@@ -223,6 +234,13 @@
                         <span class="text-slate-500 block uppercase font-bold text-[9px]">Fix</span>
                         <span id="txt-fix" class="text-rose-500">NO FIX</span>
                     </div>
+                    <div class="col-span-2 flex items-center justify-between pt-2 mt-1 border-t border-slate-800/60">
+                        <div>
+                            <span class="text-slate-500 block uppercase font-bold text-[9px]">GPS Speed (cross-check)</span>
+                            <span id="txt-gps-speed" class="text-slate-400">--</span>
+                        </div>
+                        <span id="txt-speed-delta" class="text-[10px] font-bold text-slate-600"></span>
+                    </div>
                 </div>
             </div>
 
@@ -234,6 +252,55 @@
             </div>
         </div>
     </main>
+
+    <!-- TRIP HISTORY MODAL -->
+    <div id="modal-history" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
+
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-800 shrink-0">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="history" class="w-5 h-5 text-blue-500"></i>
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-slate-200">Trip History</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="loadTelemetryHistory()" id="btn-refresh-history" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg transition">Refresh</button>
+                    <button onclick="closeHistoryModal()" class="text-slate-400 hover:text-slate-200 transition p-1" aria-label="Close">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex gap-1 px-5 pt-3 shrink-0">
+                <button id="tab-btn-analytics" onclick="switchHistoryTab('analytics')" class="text-xs font-bold px-3 py-1.5 rounded-t-lg border-b-2 border-blue-500 text-blue-400 transition">Analytics</button>
+                <button id="tab-btn-triplog" onclick="switchHistoryTab('triplog')" class="text-xs font-bold px-3 py-1.5 rounded-t-lg border-b-2 border-transparent text-slate-500 hover:text-slate-300 transition">Trip Log</button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-5 min-h-0">
+                <p id="history-status" class="text-xs text-slate-500 mb-3">Loading trip history&hellip;</p>
+
+                <div id="panel-analytics" class="h-72">
+                    <canvas id="history-chart"></canvas>
+                </div>
+
+                <div id="panel-triplog" class="hidden">
+                    <div class="max-h-96 overflow-y-auto border border-slate-800 rounded-lg">
+                        <table class="w-full text-xs font-mono">
+                            <thead class="bg-slate-950 sticky top-0">
+                                <tr class="text-slate-500 uppercase text-[10px]">
+                                    <th class="text-left px-3 py-2 font-bold">Timestamp</th>
+                                    <th class="text-left px-3 py-2 font-bold">Speed</th>
+                                    <th class="text-left px-3 py-2 font-bold">Gear</th>
+                                    <th class="text-left px-3 py-2 font-bold">Engine Temp</th>
+                                    <th class="text-left px-3 py-2 font-bold">Fuel Level</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="a.js"></script>
 </body>
