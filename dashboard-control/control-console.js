@@ -175,8 +175,25 @@ function handlePlatformStatus(msg) {
         document.getElementById('txt-obstacle-note').textContent = 'front sensor';
     }
 
-    document.getElementById('txt-heading').innerHTML =
-        (msg.heading_deg != null ? fmt(msg.heading_deg, 1) : '--') + '&deg;';
+   const headingElement = document.getElementById("txt-heading");
+
+if (msg.heading_deg != null) {
+
+    headingElement.innerHTML = `
+        <div class="text-xl font-bold">
+            ${fmt(msg.heading_deg, 1)}°
+        </div>
+
+        <div class="text-xs text-cyan-400 mt-1">
+            ${getHeadingDirection(msg.heading_deg)}
+        </div>
+    `;
+
+} else {
+
+    headingElement.innerHTML = "--";
+
+}
 
     document.getElementById('txt-battery').innerHTML =
         (msg.battery_mv != null ? (msg.battery_mv / 1000).toFixed(2) : '--.-') +
@@ -269,4 +286,35 @@ function logStatus(text) {
 function fmt(v, decimals) {
     if (v == null || Number.isNaN(v)) return '--';
     return Number(v).toFixed(decimals);
+}
+function getHeadingDirection(degrees) {
+
+    if (degrees === null || degrees === undefined || isNaN(degrees)) {
+        return "--";
+    }
+
+    degrees = ((degrees % 360) + 360) % 360;
+
+    const directions = [
+        "North",
+        "North-North-East",
+        "North-East",
+        "East-North-East",
+        "East",
+        "East-South-East",
+        "South-East",
+        "South-South-East",
+        "South",
+        "South-South-West",
+        "South-West",
+        "West-South-West",
+        "West",
+        "West-North-West",
+        "North-West",
+        "North-North-West"
+    ];
+
+    const index = Math.round(degrees / 22.5) % 16;
+
+    return directions[index];
 }
