@@ -6,6 +6,18 @@ let chartInstance = null;
 let trailPolyline = null;
 let trailPoints = [];
 const MAX_TRAIL_POINTS = 300;
+let lastVehicleSpeedKmh = null; // for GPS speed_kmh cross-check
+
+// ==========================================
+// HISTORY FEATURE (REST) — historical trip data lives in the SQLite
+// backend, separate from the live WebSocket stream. Fetched over HTTP.
+// ==========================================
+const API_BASE = 'https://api.nalusa.space';
+const TELEMETRY_HISTORY_URL = `${API_BASE}/api/telemetry/history?limit=100`;
+const GPS_TRACK_URL = `${API_BASE}/api/gps/track?limit=200`;
+let historyPolyline = null;   // past-trip breadcrumb, distinct from the live trail
+let historyChartInstance = null;
+let historyRecordsCache = null;
 
 // ==========================================
 // FRESHNESS TRACKING
@@ -30,6 +42,16 @@ window.onload = function() {
     initializeSparklineChart();
     initializeGpsMap();
     setInterval(updateFreshnessIndicators, 500);
+
+    // History modal: close on backdrop click or Escape
+    document.getElementById('modal-history').addEventListener('click', (e) => {
+        if (e.target.id === 'modal-history') closeHistoryModal();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !document.getElementById('modal-history').classList.contains('hidden')) {
+            closeHistoryModal();
+        }
+    });
 };
 
 // ==========================================
@@ -75,6 +97,10 @@ function initializeGpsMap() {
     // Breadcrumb trail: grows as fixes arrive, capped at MAX_TRAIL_POINTS
     // so a long drive doesn't unbounded-grow the DOM/memory.
     trailPolyline = L.polyline([], { color: '#3b82f6', weight: 3, opacity: 0.55 }).addTo(mapInstance);
+
+    // Past-trip route, loaded on demand from /api/gps/track. Dashed and a
+    // different color so it's never confused with the live trail above.
+    historyPolyline = L.polyline([], { color: '#a78bfa', weight: 3, opacity: 0.7, dashArray: '6, 6' }).addTo(mapInstance);
 }
 
 // ==========================================
@@ -130,6 +156,22 @@ function connectHardwareStream() {
     const logTerminal = document.getElementById('serial-terminal');
 
     if (socketInstance) { socketInstance.close(); }
+
+    // Fresh session: clear anything left over from a previous connection
+    // so a reconnect can't draw a bogus straight line across the map
+    // (old last-point -> new first-point) or show numbers as "fresh"
+    // before any new data has actually arrived.
+    trailPoints = [];
+    if (trailPolyline) trailPolyline.setLatLngs([]);
+    lastSeenTs.vehicle = 0;
+    lastSeenTs.tyres = 0;
+    lastSeenTs.gps = 0;
+    lastVehicleSpeedKmh = null;
+    if (chartInstance) {
+        chartInstance.data.datasets[0].data = Array(25).fill(0);
+        chartInstance.update('none');
+    }
+    updateFreshnessIndicators();
 
     statusIndicator.innerText = "CONNECTING...";
     statusIndicator.className = "text-amber-400 font-mono font-bold";
@@ -233,6 +275,7 @@ function fmt(value, decimals, fallback) {
 function applyVehicleData(vehicle) {
     // 1. Core CAN Bus mechanical data points
     if (vehicle.speed_kmh !== undefined) {
+        lastVehicleSpeedKmh = vehicle.speed_kmh; // tracked for GPS speed cross-check
         document.getElementById('txt-speed').innerText = vehicle.speed_kmh === null ? '--' : vehicle.speed_kmh;
 
         // Shift and update speed timeline sparkline graph elements.
@@ -377,6 +420,33 @@ function applyGpsData(gps) {
     document.getElementById('txt-lng').innerText = (gps.lng !== null && gps.lng !== undefined) ? gps.lng.toFixed(6) : '--';
     document.getElementById('txt-sats').innerText = (gps.sats !== null && gps.sats !== undefined) ? gps.sats : '--';
 
+    // Cross-check: schema notes gps.speed_kmh should be compared against
+    // vehicle.speed_kmh (OBD-derived). A large disagreement flags a bad
+    // reading on one side or the other rather than silently picking one.
+    const gpsSpeedElement = document.getElementById('txt-gps-speed');
+    const deltaElement = document.getElementById('txt-speed-delta');
+    if (gps.speed_kmh !== null && gps.speed_kmh !== undefined) {
+        gpsSpeedElement.innerText = `${gps.speed_kmh} KM/H`;
+        if (lastVehicleSpeedKmh !== null && lastVehicleSpeedKmh !== undefined) {
+            const delta = Math.abs(gps.speed_kmh - lastVehicleSpeedKmh);
+            if (delta > 15) {
+                deltaElement.innerText = `\u0394 ${delta.toFixed(0)} km/h`;
+                deltaElement.className = 'text-[10px] font-bold text-rose-500';
+            } else if (delta > 5) {
+                deltaElement.innerText = `\u0394 ${delta.toFixed(0)} km/h`;
+                deltaElement.className = 'text-[10px] font-bold text-amber-400';
+            } else {
+                deltaElement.innerText = 'MATCH';
+                deltaElement.className = 'text-[10px] font-bold text-emerald-400';
+            }
+        } else {
+            deltaElement.innerText = '';
+        }
+    } else {
+        gpsSpeedElement.innerText = '--';
+        deltaElement.innerText = '';
+    }
+
     const fixLabel = document.getElementById('txt-fix');
     if (hasFix) {
         fixLabel.innerText = 'FIX OK';
@@ -408,12 +478,260 @@ function transmitDriverCommand() {
     const textInputField = document.getElementById('input-msg');
     if (socketInstance && socketInstance.readyState === WebSocket.OPEN && textInputField.value.trim() !== "") {
         const standardizedCommandPacket = {
-            command: "msg_driver",
-            payload: textInputField.value
-        };
+                type: "command",
+                action: "msg_driver",
+                payload: textInputField.value
+            };
         socketInstance.send(JSON.stringify(standardizedCommandPacket));
         textInputField.value = "";
     } else {
         console.warn("[BRANCH WARNING] System data tunnel connection state down. Transmission aborted.");
+    }
+}
+
+// ==========================================
+// SUB-BRANCH: TRIP HISTORY (REST, not WebSocket)
+// Historical data lives in the backend's SQLite store and is pulled over
+// HTTP, separate from the live telemetry stream above. Two independent
+// features live here:
+//   1. Past route overlay on the live Leaflet map (loadPastRoute)
+//   2. A modal with a historical speed/RPM chart + trip log table
+//      (openHistoryModal / loadTelemetryHistory)
+//
+// NOTE ON DATA SHAPE: the exact field layout of /api/telemetry/history
+// records wasn't fully specified (only rpm, speed_kmh, coolant_c,
+// battery_mv, and tyre pressures were called out explicitly, plus "etc").
+// normalizeHistoryRecord() below tries a flat shape first, then falls
+// back to a nested `vehicle` object matching the live telemetry schema,
+// so this keeps working whichever shape the backend actually returns.
+// If gear / fuel_level_pct come back under different key names, update
+// the fallback chain there.
+// ==========================================
+
+function formatHistoryTimestamp(ts) {
+    if (ts === null || ts === undefined) return '--';
+    const parsed = new Date(ts);
+    if (isNaN(parsed.getTime())) return '--';
+    return parsed.toLocaleString([], { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function normalizeHistoryRecord(record) {
+    const vehicle = record.vehicle || {};
+    return {
+        ts: record.ts ?? record.timestamp ?? null,
+        speed_kmh: record.speed_kmh ?? vehicle.speed_kmh ?? null,
+        rpm: record.rpm ?? vehicle.rpm ?? null,
+        gear: record.gear ?? vehicle.gear ?? null,
+        coolant_c: record.coolant_c ?? vehicle.coolant_c ?? null,
+        fuel_level_pct: record.fuel_level_pct ?? vehicle.fuel_level_pct ?? null,
+        battery_mv: record.battery_mv ?? vehicle.battery_mv ?? null
+    };
+}
+
+// --- Modal open/close/tabs ---
+
+function openHistoryModal() {
+    document.getElementById('modal-history').classList.remove('hidden');
+    loadTelemetryHistory();
+}
+
+function closeHistoryModal() {
+    document.getElementById('modal-history').classList.add('hidden');
+}
+
+function switchHistoryTab(tab) {
+    const isAnalytics = tab === 'analytics';
+    document.getElementById('panel-analytics').classList.toggle('hidden', !isAnalytics);
+    document.getElementById('panel-triplog').classList.toggle('hidden', isAnalytics);
+
+    const activeClasses = 'text-xs font-bold px-3 py-1.5 rounded-t-lg border-b-2 border-blue-500 text-blue-400 transition';
+    const inactiveClasses = 'text-xs font-bold px-3 py-1.5 rounded-t-lg border-b-2 border-transparent text-slate-500 hover:text-slate-300 transition';
+
+    document.getElementById('tab-btn-analytics').className = isAnalytics ? activeClasses : inactiveClasses;
+    document.getElementById('tab-btn-triplog').className = !isAnalytics ? activeClasses : inactiveClasses;
+}
+
+// --- Telemetry history: fetch once, feed both the chart and the table ---
+
+async function loadTelemetryHistory() {
+    const statusEl = document.getElementById('history-status');
+    statusEl.innerText = 'Loading trip history\u2026';
+    statusEl.className = 'text-xs text-slate-500 mb-3';
+
+    try {
+        const response = await fetch(TELEMETRY_HISTORY_URL);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const rawRecords = await response.json();
+
+        if (!Array.isArray(rawRecords) || rawRecords.length === 0) {
+            statusEl.innerText = 'No historical records found.';
+            renderHistoryChart([]);
+            renderHistoryTable([]);
+            return;
+        }
+
+        const records = rawRecords.map(normalizeHistoryRecord);
+        historyRecordsCache = records;
+
+        statusEl.innerText = `Loaded ${records.length} historical record${records.length === 1 ? '' : 's'}.`;
+        renderHistoryChart(records);
+        renderHistoryTable(records);
+    } catch (err) {
+        // Most likely cause in practice: the API doesn't send
+        // Access-Control-Allow-Origin for this page's origin, and the
+        // browser blocks the response before it ever reaches here.
+        console.error('[HISTORY ERROR] Failed to fetch telemetry history.', err);
+        statusEl.innerText = 'Failed to load trip history \u2014 check the API is reachable and CORS is enabled for this origin.';
+        statusEl.className = 'text-xs text-rose-400 mb-3';
+        renderHistoryChart([]);
+        renderHistoryTable([]);
+    }
+}
+
+function renderHistoryChart(records) {
+    const canvasContext = document.getElementById('history-chart').getContext('2d');
+
+    if (historyChartInstance) {
+        historyChartInstance.destroy();
+    }
+
+    historyChartInstance = new Chart(canvasContext, {
+        type: 'line',
+        data: {
+            labels: records.map(r => formatHistoryTimestamp(r.ts)),
+            datasets: [
+                {
+                    label: 'Speed (km/h)',
+                    data: records.map(r => r.speed_kmh),
+                    borderColor: '#3b82f6',
+                    backgroundColor: '#3b82f6',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.25,
+                    yAxisID: 'y',
+                    spanGaps: true
+                },
+                {
+                    label: 'RPM',
+                    data: records.map(r => r.rpm),
+                    borderColor: '#f59e0b',
+                    backgroundColor: '#f59e0b',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.25,
+                    yAxisID: 'y1',
+                    spanGaps: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { labels: { color: '#94a3b8', boxWidth: 12, font: { size: 10 } } }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#64748b', maxRotation: 55, minRotation: 30, autoSkip: true, maxTicksLimit: 12, font: { size: 9 } },
+                    grid: { color: '#1e293b' }
+                },
+                y: {
+                    type: 'linear',
+                    position: 'left',
+                    ticks: { color: '#3b82f6', font: { size: 9 } },
+                    grid: { color: '#1e293b' },
+                    title: { display: true, text: 'km/h', color: '#3b82f6', font: { size: 10 } }
+                },
+                y1: {
+                    type: 'linear',
+                    position: 'right',
+                    ticks: { color: '#f59e0b', font: { size: 9 } },
+                    grid: { drawOnChartArea: false },
+                    title: { display: true, text: 'RPM', color: '#f59e0b', font: { size: 10 } }
+                }
+            }
+        }
+    });
+}
+
+function renderHistoryTable(records) {
+    const tbody = document.getElementById('history-table-body');
+    tbody.innerHTML = '';
+
+    if (records.length === 0) {
+        const emptyRow = document.createElement('tr');
+        const emptyCell = document.createElement('td');
+        emptyCell.colSpan = 5;
+        emptyCell.className = 'text-center text-slate-600 px-3 py-6';
+        emptyCell.textContent = 'No historical records to display.';
+        emptyRow.appendChild(emptyCell);
+        tbody.appendChild(emptyRow);
+        return;
+    }
+
+    // Most recent snapshot first
+    const ordered = [...records].reverse();
+
+    ordered.forEach((record) => {
+        const row = document.createElement('tr');
+        row.className = 'border-b border-slate-800/60 hover:bg-slate-800/30';
+
+        const cellValues = [
+            formatHistoryTimestamp(record.ts),
+            (record.speed_kmh !== null && record.speed_kmh !== undefined) ? `${record.speed_kmh} km/h` : '--',
+            (record.gear !== null && record.gear !== undefined) ? (record.gear === 0 ? 'N' : record.gear) : '--',
+            (record.coolant_c !== null && record.coolant_c !== undefined) ? `${record.coolant_c}\u00b0C` : '--',
+            (record.fuel_level_pct !== null && record.fuel_level_pct !== undefined) ? `${record.fuel_level_pct}%` : '--'
+        ];
+
+        cellValues.forEach((value, index) => {
+            const cell = document.createElement('td');
+            cell.className = 'px-3 py-2 ' + (index === 0 ? 'text-slate-400' : 'text-slate-300');
+            cell.textContent = value; // textContent, not innerHTML: this is external API data
+            row.appendChild(cell);
+        });
+
+        tbody.appendChild(row);
+    });
+}
+
+// --- Past GPS route: draws once onto the live map, separate layer from the live trail ---
+
+async function loadPastRoute() {
+    const statusEl = document.getElementById('route-status');
+    const btn = document.getElementById('btn-load-route');
+    statusEl.innerText = 'Loading past route\u2026';
+    statusEl.className = 'text-[10px] text-slate-500';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch(GPS_TRACK_URL);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const points = await response.json();
+
+        // Spec says the backend already filters to fix == true, but guard
+        // defensively anyway in case a point slips through without one.
+        const validPoints = Array.isArray(points)
+            ? points.filter(p => p && p.fix !== false && p.lat !== null && p.lat !== undefined && p.lng !== null && p.lng !== undefined)
+            : [];
+
+        if (validPoints.length === 0) {
+            statusEl.innerText = 'No past route points found.';
+            return;
+        }
+
+        const latLngs = validPoints.map(p => [p.lat, p.lng]);
+        historyPolyline.setLatLngs(latLngs);
+        mapInstance.fitBounds(historyPolyline.getBounds(), { padding: [30, 30] });
+
+        statusEl.innerText = `Loaded ${validPoints.length} past route point${validPoints.length === 1 ? '' : 's'}.`;
+        statusEl.className = 'text-[10px] text-emerald-400';
+    } catch (err) {
+        console.error('[HISTORY ERROR] Failed to fetch past GPS track.', err);
+        statusEl.innerText = 'Failed to load past route \u2014 check network/CORS.';
+        statusEl.className = 'text-[10px] text-rose-500';
+    } finally {
+        btn.disabled = false;
     }
 }
