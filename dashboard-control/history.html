@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Platform History Dashboard</title>
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <link rel="stylesheet" href="history.css">
+
+</head>
+
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+
+<!-- ====================================================== -->
+<!-- HEADER -->
+<!-- ====================================================== -->
+
+<header class="border-b border-slate-800 bg-slate-900/50 backdrop-blur px-6 py-4">
+
+    <div class="max-w-7xl mx-auto flex justify-between items-center">
+
+        <div class="flex items-center gap-3">
+
+            <div class="p-2 bg-blue-600 rounded-lg">
+                <i data-lucide="history" class="w-6 h-6 text-white"></i>
+            </div>
+
+            <div>
+
+                <h1 class="text-2xl font-bold">
+
+                    📊 Platform History Dashboard
+
+                </h1>
+
+                <p class="text-xs text-slate-400">
+
+                    Historical RC Platform Runs
+
+                </p>
+
+            </div>
+
+        </div>
+
+        <div class="flex gap-3">
+
+            <button id="refresh-history"
+                class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-semibold">
+
+                🔄 Refresh
+
+            </button>
+
+            <a href="index.html"
+                class="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg text-sm font-semibold">
+
+                ← Live Dashboard
+
+            </a>
+
+        </div>
+
+    </div>
+
+</header>
+
+<!-- ====================================================== -->
+<!-- MAIN -->
+<!-- ====================================================== -->
+
+<main class="max-w-7xl mx-auto p-6 space-y-8">
+
+<!-- ====================================================== -->
+<!-- SUMMARY -->
+<!-- ====================================================== -->
+
+<section>
+
+    <h2 class="text-lg font-bold mb-4">
+
+        📈 Platform Summary
+
+    </h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-5">
+
+        <!-- Total Records -->
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+
+            <p class="text-xs text-slate-400 uppercase">
+
+                Total Records
+
+            </p>
+
+            <h2 id="card-total-records"
+                class="text-3xl font-black mt-3">
+
+                --
+
+            </h2>
+
+        </div>
+
+        <!-- Average Speed -->
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+
+            <p class="text-xs text-slate-400 uppercase">
+
+                Average Speed
+
+            </p>
+
+            <h2 id="card-average-speed"
+                class="text-3xl font-black mt-3">
+
+                --
+
+            </h2>
+
+            <p class="text-xs text-slate-500">
+
+                km/h
+
+            </p>
+
+        </div>
+
+        <!-- Maximum Speed -->
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+
+            <p class="text-xs text-slate-400 uppercase">
+
+                Maximum Speed
+
+            </p>
+
+            <h2 id="card-max-speed"
+                class="text-3xl font-black mt-3">
+
+                --
+
+            </h2>
+
+            <p class="text-xs text-slate-500">
+
+                km/h
+
+            </p>
+
+        </div>
+
+        <!-- Battery -->
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+
+            <p class="text-xs text-slate-400 uppercase">
+
+                Lowest Battery
+
+            </p>
+
+            <h2 id="card-low-battery"
+                class="text-3xl font-black mt-3">
+
+                --
+
+            </h2>
+
+            <p class="text-xs text-slate-500">
+
+                V
+
+            </p>
+
+        </div>
+
+        <!-- Distance -->
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+
+            <p class="text-xs text-slate-400 uppercase">
+
+                Maximum Distance
+
+            </p>
+
+            <h2 id="card-max-distance"
+                class="text-3xl font-black mt-3">
+
+                --
+
+            </h2>
+
+            <p class="text-xs text-slate-500">
+
+                m
+
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+<!-- ====================================================== -->
+<!-- CHARTS -->
+<!-- ====================================================== -->
+
+<section>
+
+    <h2 class="text-lg font-bold mb-4">
+
+        📉 History Charts
+
+    </h2>
+
+    <div class="grid grid-cols-1 gap-6">
+
+        <!-- SPEED -->
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+
+            <div class="flex justify-between items-center mb-4">
+
+                <h3 class="font-bold">
+
+                    🚗 Speed History
+
+                </h3>
+
+            </div>
+
+            <canvas id="speedChart" height="90"></canvas>
+
+        </div>
+
+        <!-- BATTERY -->
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+
+            <div class="flex justify-between items-center mb-4">
+
+                <h3 class="font-bold">
+
+                    🔋 Battery History
+
+                </h3>
+
+            </div>
+
+            <canvas id="batteryChart" height="90"></canvas>
+
+        </div>
+
+        <!-- DISTANCE -->
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+
+            <div class="flex justify-between items-center mb-4">
+
+                <h3 class="font-bold">
+
+                    📍 Distance History
+
+                </h3>
+
+            </div>
+
+            <canvas id="distanceChart" height="90"></canvas>
+
+        </div>
+
+    </div>
+
+</section>
+<!-- ====================================================== -->
+<!-- SAFETY EVENTS -->
+<!-- ====================================================== -->
+
+<section>
+
+    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+
+        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-800">
+
+            <div>
+
+                <h2 class="text-lg font-bold">
+                    🚨 Safety Events
+                </h2>
+
+                <p class="text-xs text-slate-400 mt-1">
+                    SLOWING • BRAKING • Obstacle &lt; 50 cm
+                </p>
+
+            </div>
+
+            <span id="event-count"
+                  class="bg-rose-500/20 text-rose-400 px-3 py-1 rounded-full text-xs font-bold">
+
+                0 Events
+
+            </span>
+
+        </div>
+
+        <div class="overflow-x-auto">
+
+            <table class="w-full text-sm">
+
+                <thead class="bg-slate-950">
+
+                    <tr class="text-slate-400">
+
+                        <th class="text-left px-4 py-3">Time</th>
+                        <th class="text-left px-4 py-3">Drive</th>
+                        <th class="text-left px-4 py-3">Avoidance</th>
+                        <th class="text-left px-4 py-3">Obstacle</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="safety-events-body">
+
+                    <tr>
+
+                        <td colspan="4"
+                            class="text-center text-slate-500 py-8">
+
+                            No Safety Events
+
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</section>
+
+<!-- ====================================================== -->
+<!-- RUN HISTORY -->
+<!-- ====================================================== -->
+
+<section>
+
+    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+
+        <!-- Header -->
+
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 px-5 py-4 border-b border-slate-800">
+
+            <div>
+
+                <h2 class="text-lg font-bold">
+
+                    📜 Run History
+
+                </h2>
+
+                <p class="text-xs text-slate-400 mt-1">
+
+                    Previous autonomous platform records
+
+                </p>
+
+            </div>
+
+            <div class="flex flex-wrap gap-3">
+
+                <input
+
+                    id="search-history"
+
+                    type="text"
+
+                    placeholder="Search..."
+
+                    class="bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-sm w-64 focus:outline-none focus:border-blue-500"
+
+                >
+
+                <button
+
+                    id="btn-refresh-history"
+
+                    class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-semibold">
+
+                    🔄 Refresh
+
+                </button>
+
+            </div>
+
+        </div>
+
+        <!-- Table -->
+
+        <div class="overflow-auto max-h-[650px]">
+
+            <table class="w-full text-sm">
+
+                <thead class="sticky top-0 bg-slate-950 z-10">
+
+                    <tr class="text-slate-400">
+
+                        <th class="px-4 py-3 text-left">Timestamp</th>
+
+                        <th class="px-4 py-3 text-left">Drive State</th>
+
+                        <th class="px-4 py-3 text-left">Avoidance</th>
+
+                        <th class="px-4 py-3 text-left">Distance</th>
+
+                        <th class="px-4 py-3 text-left">Speed</th>
+
+                        <th class="px-4 py-3 text-left">Obstacle</th>
+
+                        <th class="px-4 py-3 text-left">Battery</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="history-table-body">
+
+                    <tr>
+
+                        <td colspan="7"
+                            class="text-center py-16 text-slate-500">
+
+                            Waiting for history data...
+
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</section>
+
+</main>
+
+<!-- ====================================================== -->
+<!-- FOOTER -->
+<!-- ====================================================== -->
+
+<footer class="border-t border-slate-800 mt-8">
+
+    <div class="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center">
+
+        <div class="text-sm text-slate-500">
+
+            Autonomous RC Vehicle Platform History Dashboard
+
+        </div>
+
+        <div class="text-sm text-slate-500">
+
+            SQLite History • REST API • Chart.js
+
+        </div>
+
+    </div>
+
+</footer>
+
+<!-- ====================================================== -->
+<!-- JAVASCRIPT -->
+<!-- ====================================================== -->
+
+<script>
+
+    lucide.createIcons();
+
+</script>
+
+<script src="history.js"></script>
+
+</body>
+
+</html>

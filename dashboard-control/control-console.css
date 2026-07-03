@@ -47,14 +47,27 @@ input[type="range"]#slider-speed::-moz-range-thumb {
     border: 2px solid #1e3a8a;
 }
 
-/* Emergency stop pulse when armed/pressed */
-#btn-estop:active {
-    transform: scale(0.98);
+/* Pressed-state feedback for D-pad buttons */
+#branch-controls-ui button:active {
+    transform: scale(0.97);
 }
 
+/* Controls are genuinely disabled — not just styled — until a device is
+   connected. This makes that state unmistakable, not just implied. */
+.control-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    filter: grayscale(0.6);
+}
+
+.control-btn:disabled:active {
+    transform: none;
+}
+
+/* Emergency stop pulse when pressed */
 @keyframes pulse-ring {
     0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.5); }
-    100% { box-shadow: 0 0 0 12px rgba(244, 63, 94, 0); }
+    100% { box-shadow: 0 0 0 14px rgba(244, 63, 94, 0); }
 }
 
 .estop-pulse {
