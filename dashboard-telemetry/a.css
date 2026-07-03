@@ -1,0 +1,63 @@
+/* Custom resets to bridge custom layout adjustments with utility components */
+
+#map-frame {
+    background-color: #020617; /* Matches slate-950 background color to prevent bright grey tile flash */
+}
+
+/* Scrollbar styling for the hardware serial rx logger terminal window */
+#serial-terminal::-webkit-scrollbar {
+    width: 6px;
+}
+
+#serial-terminal::-webkit-scrollbar-track {
+    background: #020617;
+}
+
+#serial-terminal::-webkit-scrollbar-thumb {
+    background: #1e293b;
+    border-radius: 4px;
+}
+
+#serial-terminal::-webkit-scrollbar-thumb:hover {
+    background: #334155;
+}
+
+/* ==========================================
+   FRESHNESS INDICATOR DOTS
+   Per-panel "is this data actually live" marker.
+   .fresh  = update received within STALE_THRESHOLD_MS (see a.js)
+   .stale  = no update within threshold, or never connected
+   ========================================== */
+.freshness-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    display: inline-block;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.freshness-dot.fresh {
+    background-color: #34d399; /* emerald-400 */
+    box-shadow: 0 0 6px 1px rgba(52, 211, 153, 0.7);
+    animation: freshness-pulse 1.6s ease-in-out infinite;
+}
+
+.freshness-dot.stale {
+    background-color: #475569; /* slate-600 */
+    box-shadow: none;
+}
+
+@keyframes freshness-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+/* Values greyed out when their parent panel goes stale.
+   Applied to card containers (not individual spans), so it must work
+   regardless of each child's own Tailwind text-color class -- opacity +
+   grayscale dims everything inside without fighting inherited `color`. */
+.value-stale {
+    opacity: 0.45;
+    filter: grayscale(0.6);
+    transition: opacity 0.4s ease, filter 0.4s ease;
+}

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VEHICLE CONTROL CONSOLE</title>
+
+    <!-- External Dependencies via CDN (same stack as Telemetry Dashboard) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <link rel="stylesheet" href="control-console.css">
+
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+
+    <!-- HEADER & CONFIGURATION -->
+    <header class="border-b border-slate-800 bg-slate-900/50 backdrop-blur px-6 py-4 flex flex-wrap justify-between items-center gap-4">
+        <div class="flex items-center gap-3">
+            <div class="p-2 bg-blue-600 rounded-lg text-white">
+                <i data-lucide="joystick" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight">Vehicle Control Console</h1>
+                <p class="text-xs text-slate-400">Platform Link: <span id="connection-status" class="text-rose-500 font-mono font-bold">OFFLINE</span></p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <input type="text" id="ws-url" value="ws://192.168.1.101:81" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 font-mono focus:outline-none focus:border-blue-500 w-48" placeholder="ws://ESP32_IP:81">
+            <button onclick="connectPlatformStream()" id="btn-connect" class="bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs px-4 py-2 rounded-lg transition">Connect Stream</button>
+        </div>
+    </header>
+
+    <!-- COLLISION AVOIDANCE BANNER -->
+    <div id="avoidance-banner" class="px-6 py-3 bg-slate-900 border-b border-slate-800 flex items-center justify-center gap-3 transition-colors">
+        <i data-lucide="shield" class="w-5 h-5" id="avoidance-icon"></i>
+        <span class="text-sm font-bold tracking-widest uppercase" id="avoidance-text">Awaiting connection</span>
+    </div>
+
+    <!-- MAIN DISPLAY GRID -->
+    <main class="p-6 max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- CONTROLS HALF -->
+        <div class="space-y-6" id="branch-controls-ui">
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                <i data-lucide="sliders-horizontal" class="w-4 h-4 text-blue-500"></i> Drive Controls
+            </h2>
+
+            <!-- Drive state -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center justify-between">
+                <div>
+                    <span class="text-xs text-slate-400 font-medium block">Drive State</span>
+                    <span id="txt-drive-state" class="text-2xl font-extrabold text-white font-mono">--</span>
+                </div>
+                <i data-lucide="car" class="w-8 h-8 text-slate-600"></i>
+            </div>
+
+            <!-- Motion buttons -->
+            <div class="grid grid-cols-3 gap-4">
+                <button onclick="sendCommand('forward')" id="btn-forward" class="bg-slate-900 border border-slate-800 hover:border-emerald-500 hover:bg-emerald-500/10 rounded-xl p-4 flex flex-col items-center justify-center gap-2 transition-colors">
+                    <i data-lucide="arrow-up" class="w-6 h-6 text-emerald-500"></i>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-300">Forward</span>
+                </button>
+                <button onclick="sendCommand('stop')" id="btn-stop" class="bg-slate-900 border border-slate-800 hover:border-amber-500 hover:bg-amber-500/10 rounded-xl p-4 flex flex-col items-center justify-center gap-2 transition-colors">
+                    <i data-lucide="square" class="w-6 h-6 text-amber-500"></i>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-300">Stop</span>
+                </button>
+                <button onclick="sendCommand('brake')" id="btn-brake" class="bg-slate-900 border border-slate-800 hover:border-orange-500 hover:bg-orange-500/10 rounded-xl p-4 flex flex-col items-center justify-center gap-2 transition-colors">
+                    <i data-lucide="octagon-pause" class="w-6 h-6 text-orange-500"></i>
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-300">Brake</span>
+                </button>
+            </div>
+
+            <!-- Target speed slider -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-slate-400 font-medium">Target Speed</span>
+                    <span class="font-mono text-sm font-bold text-blue-400"><span id="txt-slider-value">3.0</span> km/h</span>
+                </div>
+                <input type="range" id="slider-speed" min="0" max="10" step="0.5" value="3.0"
+                    class="w-full accent-blue-600 h-2 bg-slate-800 rounded-full appearance-none cursor-pointer"
+                    oninput="onSliderInput()" onchange="onSliderCommit()">
+                <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                    <span>0</span><span>10 km/h</span>
+                </div>
+            </div>
+
+            <!-- Emergency Stop -->
+            <button onclick="sendEstop()" id="btn-estop"
+                class="w-full bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white font-black text-xl py-8 rounded-xl transition-colors flex items-center justify-center gap-3 shadow-lg shadow-rose-950/50 border-2 border-rose-400/30">
+                <i data-lucide="octagon-x" class="w-8 h-8"></i>
+                EMERGENCY STOP
+            </button>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
+                <span class="text-xs font-bold text-slate-400 block tracking-tight">Outbound Command Log</span>
+                <div class="bg-slate-950 rounded-lg p-3 h-28 font-mono text-[11px] text-blue-500 overflow-y-auto border border-slate-800/80 space-y-1" id="command-log">
+                    No commands sent yet...
+                </div>
+            </div>
+        </div>
+
+        <!-- LIVE FEEDBACK HALF -->
+        <div class="space-y-6" id="branch-feedback-ui">
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                <i data-lucide="radio" class="w-4 h-4 text-emerald-500"></i> Live Feedback
+            </h2>
+
+            <!-- Distance progress -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+                <div class="flex justify-between items-baseline">
+                    <span class="text-xs text-slate-400 font-medium">Distance Travelled</span>
+                    <span class="font-mono text-xs text-slate-500">Target: <span id="txt-target-distance">100.0</span> m</span>
+                </div>
+                <div class="flex items-baseline gap-1">
+                    <span id="txt-distance" class="text-4xl font-extrabold text-white font-mono">--</span>
+                    <span class="text-xs text-slate-500 font-bold">M</span>
+                </div>
+                <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden">
+                    <div id="bar-distance" class="bg-blue-500 h-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Speed + obstacle -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                    <span class="text-[10px] text-slate-400 block font-bold uppercase tracking-wider mb-1">Current Speed</span>
+                    <div class="flex items-baseline gap-1">
+                        <span id="txt-speed" class="text-3xl font-black text-white font-mono">--</span>
+                        <span class="text-xs text-slate-500 font-bold">km/h</span>
+                    </div>
+                    <span class="text-[10px] text-slate-600 font-mono">target <span id="txt-target-speed">--</span> km/h</span>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                    <span class="text-[10px] text-slate-400 block font-bold uppercase tracking-wider mb-1">Obstacle Distance</span>
+                    <div class="flex items-baseline gap-1">
+                        <span id="txt-obstacle" class="text-3xl font-black text-white font-mono">--</span>
+                        <span class="text-xs text-slate-500 font-bold">cm</span>
+                    </div>
+                    <span class="text-[10px] text-slate-600 font-mono" id="txt-obstacle-note">front sensor</span>
+                </div>
+            </div>
+
+            <!-- Battery + heading -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-lg">
+                        <i data-lucide="battery" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs text-slate-400 font-medium block">Platform Battery</span>
+                        <span id="txt-battery" class="text-xl font-bold font-mono">--.- <span class="text-xs text-slate-500">V</span></span>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs text-slate-400 font-medium block">Heading</span>
+                    <span id="txt-heading" class="text-xl font-bold font-mono">--&deg;</span>
+                </div>
+            </div>
+
+            <!-- Freshness / last update -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 tracking-tight flex items-center gap-2">
+                    <span id="freshness-dot" class="w-2 h-2 rounded-full bg-slate-600"></span>
+                    Feed Status
+                </span>
+                <span id="txt-freshness" class="text-xs font-mono text-slate-500">no data</span>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
+                <span class="text-xs font-bold text-slate-400 block tracking-tight">Inbound Status Stream Log</span>
+                <div class="bg-slate-950 rounded-lg p-3 h-28 font-mono text-[11px] text-emerald-500 overflow-y-auto border border-slate-800/80 space-y-1" id="status-terminal">
+                    Disconnected. Initialize socket link to stream live platform status frames...
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="control-console.js"></script>
+</body>
+</html>
