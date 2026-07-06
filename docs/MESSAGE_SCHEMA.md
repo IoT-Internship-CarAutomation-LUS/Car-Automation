@@ -187,7 +187,7 @@ Sent when the user presses a button or moves the slider. Keep it tiny.
 
 - Transport: **WebSocket**
 - Dev URL (direct to ESP32): `ws://<ESP32_IP>:81`
-- Later (via backend): `wss://lus.nalusa.space/ws` — same message formats, no change to either dashboard.
+- Via backend (current): `wss://api.nalusa.space/ws` — same message formats, no change to either dashboard. (Dashboard 1 is deployed separately at `lus.nalusa.space`, Dashboard 2 at `dashboard2.nalusa.space` — neither is the backend host.)
 - On connect, hardware/backend may send one `telemetry` or `platform_status` immediately so the UI isn't blank.
 
 ---
@@ -242,3 +242,15 @@ Any change to this schema goes through the team lead and gets a line here so nob
 | Date | Change | By |
 |------|--------|-----|
 | (today) | v1 — initial schema: telemetry, platform_status, command | team lead |
+
+---
+
+## 8. Known drift (pending team-lead decision)
+
+The following fields/actions are already used in shipped code but are **not yet formalized here**. Do not treat their presence in code as approval — they're listed so the drift is visible, pending a decision as part of the upcoming data-standard work. Until then, nothing outside this list should be treated as schema-legal.
+
+| Item | Type | Used in | Notes |
+|------|------|---------|-------|
+| `brake_pct` | `telemetry.vehicle` field | `backend/mock_telemetry.py`, `dashboard-telemetry/index.html` | Only boolean `brake` is defined above (§2). Dashboard 1 renders a `brake_pct` bar labelled "Digital until hardware sends brake_pct"; the mock sender fabricates a value client-side. |
+| `msg_driver` | `command` action | `dashboard-telemetry/a.js` | Not in the §4 action table. Sent from Dashboard 1's outbound message console; no consumer currently handles it. |
+| `left`, `right`, `backward`, `start` | `command` actions | `dashboard-control/control-console.js`, `dashboard-control/index.html` | Not in the §4 action table. Wired to Dashboard 2's D-pad/start button; flagged in-code as "pending addition to MESSAGE_SCHEMA.md." No firmware/mock currently handles any of the four. |
