@@ -149,7 +149,7 @@ function initializeGpsMap() {
 const STALE_CARD_IDS = {
     vehicle: ['card-vehicle-primary', 'card-gear-clutch', 'card-brake', 'card-fuel', 'card-engine-health'],
     tyres: ['card-tyres'],
-    gps: ['card-gps-readout']
+    gps: ['card-gps-readout', 'card-trip-odometer']
 };
 
 function updateFreshnessIndicators() {
@@ -315,11 +315,25 @@ function fmt(value, decimals, fallback) {
     return Number(value).toFixed(decimals);
 }
 
+// Dial scales for the twin instrument gauges in card-vehicle-primary.
+// Purely visual (ring fill percentage) — the numeric readout underneath
+// always shows the exact value regardless of scale.
+const SPEED_DIAL_MAX_KMH = 220;
+const RPM_DIAL_MAX = 8000;
+
+function setDialPct(dialId, value, max) {
+    const dial = document.getElementById(dialId);
+    if (!dial) return;
+    const pct = value === null || value === undefined ? 0 : Math.max(0, Math.min(100, (value / max) * 100));
+    dial.style.setProperty('--pct', pct.toFixed(1));
+}
+
 function applyVehicleData(vehicle) {
     // 1. Core CAN Bus mechanical data points
     if (vehicle.speed_kmh !== undefined) {
         lastVehicleSpeedKmh = vehicle.speed_kmh; // tracked for GPS speed cross-check
         document.getElementById('txt-speed').innerText = vehicle.speed_kmh === null ? '--' : vehicle.speed_kmh;
+        setDialPct('dial-speed', vehicle.speed_kmh, SPEED_DIAL_MAX_KMH);
 
         // Shift and update speed timeline sparkline graph elements.
         // A null reading pushes 0 onto the sparkline (not a skip) so a
@@ -331,17 +345,18 @@ function applyVehicleData(vehicle) {
     }
     if (vehicle.rpm !== undefined) {
         const txtRpm = document.getElementById('txt-rpm');
+        const rpmDial = document.getElementById('dial-rpm');
         const redlineBadge = document.getElementById('badge-redline');
         if (vehicle.rpm === null) {
             txtRpm.innerText = '--';
-            txtRpm.className = 'text-4xl font-extrabold text-white font-mono';
+            rpmDial.classList.remove('dial-redline');
             redlineBadge.classList.add('hidden');
+            setDialPct('dial-rpm', null, RPM_DIAL_MAX);
         } else {
             txtRpm.innerText = vehicle.rpm.toLocaleString();
+            setDialPct('dial-rpm', vehicle.rpm, RPM_DIAL_MAX);
             const overRedline = vehicle.rpm > RPM_REDLINE;
-            txtRpm.className = overRedline
-                ? 'text-4xl font-extrabold text-rose-500 font-mono animate-pulse'
-                : 'text-4xl font-extrabold text-white font-mono';
+            rpmDial.classList.toggle('dial-redline', overRedline);
             redlineBadge.classList.toggle('hidden', !overRedline);
         }
     }
@@ -379,14 +394,32 @@ function applyVehicleData(vehicle) {
     if (vehicle.brake !== undefined) {
         const elementBrakeCard = document.getElementById('card-brake');
         const elementBrakeTxt = document.getElementById('txt-brake');
+
         if (vehicle.brake === true) {
-            elementBrakeCard.className = "bg-rose-950/40 border border-rose-800 text-rose-400 rounded-xl p-4 flex flex-col items-center justify-center text-center";
+            elementBrakeCard.className = "bg-rose-950/40 border border-rose-800 rounded-xl p-5 transition-colors";
             elementBrakeTxt.innerText = "ACTIVE";
+            elementBrakeTxt.className = "text-xs font-bold text-rose-400";
         } else if (vehicle.brake === false) {
-            elementBrakeCard.className = "bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col items-center justify-center text-center";
+            elementBrakeCard.className = "bg-slate-900 border border-slate-800 rounded-xl p-5 transition-colors";
             elementBrakeTxt.innerText = "OFF";
+            elementBrakeTxt.className = "text-xs font-bold text-slate-500";
         } else {
             elementBrakeTxt.innerText = "--";
+        }
+    }
+
+    // 2b. Analog brake pressure (vehicle.brake_pct), independent of the
+    // boolean brake flag above so both can update on their own cadence.
+    if (vehicle.brake_pct !== undefined) {
+        const barBrake = document.getElementById('bar-brake');
+        const txtBrakePct = document.getElementById('txt-brake-pct');
+
+        if (vehicle.brake_pct === null) {
+            barBrake.style.width = '0%';
+            txtBrakePct.innerText = '--%';
+        } else {
+            barBrake.style.width = `${vehicle.brake_pct}%`;
+            txtBrakePct.innerText = `${vehicle.brake_pct}%`;
         }
     }
 

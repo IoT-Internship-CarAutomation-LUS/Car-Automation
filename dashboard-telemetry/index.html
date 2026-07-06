@@ -4,35 +4,52 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CAR AUTOMATION</title>
-    
+
+    <!-- Typography: Sora for structural/labels, JetBrains Mono for telemetry readouts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <!-- External Dependencies via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Sora"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    
+
     <link rel="stylesheet" href="a.css">
-    
+
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
 
     <!-- HEADER & CONFIGURATION -->
-    <header class="border-b border-slate-800 bg-slate-900/50 backdrop-blur px-6 py-4 flex flex-wrap justify-between items-center gap-4">
+    <header class="dash-header px-6 py-4 flex flex-wrap justify-between items-center gap-4">
         <div class="flex items-center gap-3">
-            <div class="p-2 bg-blue-600 rounded-lg text-white">
-                <i data-lucide="cpu" class="w-6 h-6"></i>
+            <div class="brand-mark">
+                <i data-lucide="cpu" class="w-5 h-5"></i>
             </div>
             <div>
-                <h1 class="text-xl font-bold tracking-tight">ESP32 Telematics Gateway</h1>
-                <p class="text-xs text-slate-400">Hardware Link: <span id="connection-status" class="text-rose-500 font-mono font-bold">OFFLINE</span> <span class="text-slate-700">|</span> Last Update: <span id="txt-last-update" class="font-mono text-slate-500">--:--:--</span></p>
+                <h1 class="text-lg font-bold tracking-tight leading-none">ESP32 Telematics Gateway</h1>
+                <p class="text-xs text-slate-500 mt-1.5">Hardware Link&nbsp; <span id="connection-status" class="status-pill status-offline">OFFLINE</span> <span class="text-slate-700 mx-1">&middot;</span> Last update&nbsp;<span id="txt-last-update" class="font-mono text-slate-500">--:--:--</span></p>
             </div>
         </div>
-        
+
         <div class="flex items-center gap-3">
-            <input type="text" id="ws-url" value="wss://api.nalusa.space/ws" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 font-mono focus:outline-none focus:border-blue-500 w-48" placeholder="wss://api.nalusa.space/ws">
-            <button onclick="connectHardwareStream()" id="btn-connect" class="bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs px-4 py-2 rounded-lg transition">Connect Stream</button>
-            <button onclick="openHistoryModal()" id="btn-history" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs px-4 py-2 rounded-lg transition flex items-center gap-1.5">
+            <input type="text" id="ws-url" value="wss://api.nalusa.space/ws" class="dash-input w-52" placeholder="wss://api.nalusa.space/ws">
+            <button onclick="connectHardwareStream()" id="btn-connect" class="btn-primary">Connect Stream</button>
+            <button onclick="openHistoryModal()" id="btn-history" class="btn-ghost flex items-center gap-1.5">
                 <i data-lucide="history" class="w-3.5 h-3.5"></i> History
             </button>
         </div>
@@ -40,102 +57,111 @@
 
     <!-- MAIN DISPLAY GRID -->
     <main class="p-6 max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         <!-- DRIVETRAIN METRICS PANEL -->
         <div class="space-y-6" id="branch-drivetrain-ui">
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                <i data-lucide="gauge" class="w-4 h-4 text-blue-500"></i> Drivetrain & Dynamics
+            <h2 class="panel-heading">
+                <i data-lucide="gauge" class="w-4 h-4 text-accent"></i> Drivetrain &amp; Dynamics
                 <span class="freshness-dot stale ml-auto" id="fresh-vehicle" title="Data freshness"></span>
             </h2>
-            
-            <div id="card-vehicle-primary" class="bg-slate-900 border border-slate-800 rounded-xl p-5 grid grid-cols-2 gap-4">
-                <div class="space-y-1">
-                    <span class="text-xs text-slate-400 block font-medium">VEHICLE SPEED</span>
-                    <div class="flex items-baseline gap-1">
-                        <span id="txt-speed" class="text-4xl font-extrabold text-white font-mono">--</span>
-                        <span class="text-xs text-slate-500 font-bold">KM/H</span>
+
+            <div id="card-vehicle-primary" class="dash-card p-5">
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Speed instrument dial -->
+                    <div class="instrument">
+                        <div class="dial" id="dial-speed" style="--pct: 0;">
+                            <div class="dial-face">
+                                <span id="txt-speed" class="dial-value">--</span>
+                                <span class="dial-unit">KM/H</span>
+                            </div>
+                        </div>
+                        <span class="instrument-label">Vehicle Speed</span>
+                    </div>
+
+                    <!-- Engine RPM instrument dial -->
+                    <div class="instrument">
+                        <div class="dial" id="dial-rpm" style="--pct: 0;">
+                            <div class="dial-face">
+                                <span id="txt-rpm" class="dial-value">--</span>
+                                <span class="dial-unit">RPM</span>
+                            </div>
+                        </div>
+                        <span class="instrument-label flex items-center justify-center gap-1.5">
+                            Engine Speed
+                            <span id="badge-redline" class="hidden redline-chip">REDLINE</span>
+                        </span>
                     </div>
                 </div>
-                <div class="space-y-1 border-l border-slate-800 pl-4">
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs text-slate-400 block font-medium">ENGINE SPEED</span>
-                        <span id="badge-redline" class="hidden px-1.5 py-0.5 text-[8px] font-black rounded bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse">REDLINE</span>
-                    </div>
-                    <div class="flex items-baseline gap-1">
-                        <span id="txt-rpm" class="text-4xl font-extrabold text-white font-mono">--</span>
-                        <span class="text-xs text-slate-500 font-bold">RPM</span>
-                    </div>
-                </div>
-                <div class="col-span-2 h-16 mt-2">
+                <div class="h-16 mt-5">
                     <canvas id="sparkline-canvas"></canvas>
                 </div>
             </div>
 
             <div id="card-gear-clutch" class="grid grid-cols-2 gap-4">
-                <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 text-center flex flex-col justify-center">
-                    <span class="text-xs text-slate-400 block font-bold uppercase tracking-wider mb-2">Gear</span>
-                    <span id="txt-gear" class="text-5xl font-black text-blue-500 font-mono">-</span>
+                <div class="dash-card p-5 text-center flex flex-col justify-center items-center">
+                    <span class="field-label mb-2">Gear</span>
+                    <span id="txt-gear" class="gear-readout">-</span>
                 </div>
-                <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-center">
+                <div class="dash-card p-5 flex flex-col justify-center">
                     <div class="flex items-center justify-between mb-3">
-                        <span class="text-xs text-slate-400 block font-bold uppercase tracking-wider">Clutch</span>
-                        <span id="txt-clutch" class="text-sm font-mono font-bold text-slate-300">--%</span>
+                        <span class="field-label">Clutch</span>
+                        <span id="txt-clutch" class="text-sm font-mono font-semibold text-slate-300">--%</span>
                     </div>
-                    <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden">
-                        <div id="bar-clutch" class="bg-blue-500 h-full transition-all duration-150" style="width: 0%"></div>
+                    <div class="meter">
+                        <div id="bar-clutch" class="meter-fill meter-fill-accent" style="width: 0%"></div>
                     </div>
                 </div>
             </div>
 
-            <div id="card-brake" class="bg-slate-900 border border-slate-800 rounded-xl p-5 transition-colors">
+            <div id="card-brake" class="dash-card p-5 transition-colors">
                 <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center gap-2">
                         <i data-lucide="circle-dot" class="w-4 h-4 text-slate-500" id="icon-brake"></i>
-                        <span class="text-xs text-slate-400 font-bold uppercase tracking-wider">Brake Pedal</span>
+                        <span class="field-label">Brake Pedal</span>
                     </div>
                     <span id="txt-brake" class="text-xs font-bold text-slate-500">--</span>
                 </div>
-                <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden mb-1">
-                    <div id="bar-brake" class="bg-rose-500 h-full transition-all duration-150" style="width: 0%"></div>
+                <div class="meter mb-1.5">
+                    <div id="bar-brake" class="meter-fill meter-fill-danger" style="width: 0%"></div>
                 </div>
                 <div class="flex items-center justify-between">
-                    <span id="txt-brake-pct" class="text-[10px] font-mono font-bold text-slate-500">--%</span>
-                    <span class="text-[8px] text-slate-600">Digital until hardware sends brake_pct</span>
+                    <span id="txt-brake-pct" class="text-[10px] font-mono font-semibold text-slate-500">--%</span>
+                    <span class="text-[9px] text-slate-600">Analog pressure &middot; brake_pct</span>
                 </div>
             </div>
 
             <!-- ENGINE HEALTH PANEL -->
-            <div id="card-engine-health" class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+            <div id="card-engine-health" class="dash-card p-5">
                 <div class="flex items-center justify-between mb-4">
-                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                    <span class="field-label flex items-center gap-2">
                         <i data-lucide="activity" class="w-4 h-4 text-emerald-500"></i> Engine Health
                     </span>
-                    <span id="badge-dtc" class="px-2.5 py-1 text-[10px] font-bold rounded-full bg-slate-800 text-slate-500 border border-slate-700">-- DTC</span>
+                    <span id="badge-dtc" class="chip chip-neutral">-- DTC</span>
                 </div>
                 <div class="grid grid-cols-3 gap-4 text-center">
                     <div>
-                        <span class="text-[9px] text-slate-500 block uppercase font-bold">Coolant</span>
-                        <span id="txt-coolant" class="text-sm font-mono font-bold text-slate-300">-- &deg;C</span>
+                        <span class="micro-label">Coolant</span>
+                        <span id="txt-coolant" class="readout">-- &deg;C</span>
                     </div>
                     <div>
-                        <span class="text-[9px] text-slate-500 block uppercase font-bold">Intake</span>
-                        <span id="txt-intake" class="text-sm font-mono font-bold text-slate-300">-- &deg;C</span>
+                        <span class="micro-label">Intake</span>
+                        <span id="txt-intake" class="readout">-- &deg;C</span>
                     </div>
                     <div>
-                        <span class="text-[9px] text-slate-500 block uppercase font-bold">Throttle</span>
-                        <span id="txt-throttle" class="text-sm font-mono font-bold text-slate-300">--%</span>
+                        <span class="micro-label">Throttle</span>
+                        <span id="txt-throttle" class="readout">--%</span>
                     </div>
                     <div>
-                        <span class="text-[9px] text-slate-500 block uppercase font-bold">Load</span>
-                        <span id="txt-load" class="text-sm font-mono font-bold text-slate-300">--%</span>
+                        <span class="micro-label">Load</span>
+                        <span id="txt-load" class="readout">--%</span>
                     </div>
                     <div>
-                        <span class="text-[9px] text-slate-500 block uppercase font-bold">MAF</span>
-                        <span id="txt-maf" class="text-sm font-mono font-bold text-slate-300">-- g/s</span>
+                        <span class="micro-label">MAF</span>
+                        <span id="txt-maf" class="readout">-- g/s</span>
                     </div>
                     <div>
-                        <span class="text-[9px] text-slate-500 block uppercase font-bold">Battery</span>
-                        <span id="txt-battery" class="text-sm font-mono font-bold text-slate-300">--.- V</span>
+                        <span class="micro-label">Battery</span>
+                        <span id="txt-battery" class="readout">--.- V</span>
                     </div>
                 </div>
             </div>
@@ -143,144 +169,144 @@
 
         <!-- TPMS DIAGNOSTICS & CABIN PANEL -->
         <div class="space-y-6" id="branch-tpms-ui">
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                <i data-lucide="wrench" class="w-4 h-4 text-emerald-500"></i> TPMS & Cabin Environment
+            <h2 class="panel-heading">
+                <i data-lucide="wrench" class="w-4 h-4 text-emerald-500"></i> TPMS &amp; Cabin Environment
                 <span class="freshness-dot stale ml-auto" id="fresh-tyres" title="Data freshness"></span>
             </h2>
 
-            <div id="card-tyres" class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col items-center relative min-h-[280px] justify-center">
-                <div class="w-24 h-44 border-4 border-slate-800 rounded-2xl relative my-4 flex items-center justify-center">
-                    <div class="w-1 h-32 bg-slate-800 rounded"></div>
-                    <div class="w-20 h-1 bg-slate-800 absolute top-8"></div>
-                    <div class="w-20 h-1 bg-slate-800 absolute bottom-8"></div>
-                    
-                    <div id="tyre-fl" class="absolute -left-3 top-4 w-2.5 h-7 bg-slate-800 rounded transition-colors"></div>
-                    <div id="tyre-fr" class="absolute -right-3 top-4 w-2.5 h-7 bg-slate-800 rounded transition-colors"></div>
-                    <div id="tyre-rl" class="absolute -left-3 bottom-4 w-2.5 h-7 bg-slate-800 rounded transition-colors"></div>
-                    <div id="tyre-rr" class="absolute -right-3 bottom-4 w-2.5 h-7 bg-slate-800 rounded transition-colors"></div>
+            <div id="card-tyres" class="dash-card p-6 flex flex-col items-center relative min-h-[280px] justify-center">
+                <div class="chassis-outline my-4 flex items-center justify-center">
+                    <div class="chassis-spine"></div>
+                    <div class="chassis-axle" style="top: 2rem;"></div>
+                    <div class="chassis-axle" style="bottom: 2rem;"></div>
+
+                    <div id="tyre-fl" class="tyre-block tyre-fl"></div>
+                    <div id="tyre-fr" class="tyre-block tyre-fr"></div>
+                    <div id="tyre-rl" class="tyre-block tyre-rl"></div>
+                    <div id="tyre-rr" class="tyre-block tyre-rr"></div>
                 </div>
 
                 <div class="absolute top-8 left-4 text-left">
-                    <p class="text-xs font-bold text-slate-500">FL</p>
-                    <p id="press-fl" class="text-sm font-mono font-bold text-slate-400">-- PSI</p>
+                    <p class="micro-label !text-left">FL</p>
+                    <p id="press-fl" class="readout !text-left">-- PSI</p>
                     <p id="temp-fl" class="text-[10px] font-mono text-slate-600">-- &deg;C</p>
                 </div>
                 <div class="absolute top-8 right-4 text-right">
-                    <p class="text-xs font-bold text-slate-500">FR</p>
-                    <p id="press-fr" class="text-sm font-mono font-bold text-slate-400">-- PSI</p>
+                    <p class="micro-label !text-right">FR</p>
+                    <p id="press-fr" class="readout !text-right">-- PSI</p>
                     <p id="temp-fr" class="text-[10px] font-mono text-slate-600">-- &deg;C</p>
                 </div>
                 <div class="absolute bottom-8 left-4 text-left">
-                    <p class="text-xs font-bold text-slate-500">RL</p>
-                    <p id="press-rl" class="text-sm font-mono font-bold text-slate-400">-- PSI</p>
+                    <p class="micro-label !text-left">RL</p>
+                    <p id="press-rl" class="readout !text-left">-- PSI</p>
                     <p id="temp-rl" class="text-[10px] font-mono text-slate-600">-- &deg;C</p>
                 </div>
                 <div class="absolute bottom-8 right-4 text-right">
-                    <p class="text-xs font-bold text-slate-500">RR</p>
-                    <p id="press-rr" class="text-sm font-mono font-bold text-slate-400">-- PSI</p>
+                    <p class="micro-label !text-right">RR</p>
+                    <p id="press-rr" class="readout !text-right">-- PSI</p>
                     <p id="temp-rr" class="text-[10px] font-mono text-slate-600">-- &deg;C</p>
                 </div>
             </div>
 
-            <div id="card-fuel" class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+            <div id="card-fuel" class="dash-card p-5 space-y-3">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Fuel System</span>
-                    <span id="badge-fuel-alert" class="px-2.5 py-1 text-[10px] font-bold rounded-full bg-slate-800 text-slate-500 border border-slate-700">--</span>
+                    <span class="field-label">Fuel System</span>
+                    <span id="badge-fuel-alert" class="chip chip-neutral">--</span>
                 </div>
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
-                        <div class="p-2.5 bg-amber-500/10 text-amber-500 rounded-lg">
+                        <div class="icon-tile icon-tile-amber">
                             <i data-lucide="fuel" class="w-5 h-5"></i>
                         </div>
                         <div>
-                            <span class="text-xs text-slate-400 font-medium block">Fuel Mileage</span>
-                            <span id="txt-fuel" class="text-xl font-bold font-mono">--.- <span class="text-xs text-slate-500">km/L</span></span>
+                            <span class="micro-label !text-left">Fuel Mileage</span>
+                            <span id="txt-fuel" class="text-xl font-bold font-mono">--.- <span class="text-xs text-slate-500 font-medium">km/L</span></span>
                         </div>
                     </div>
                     <div class="text-right">
-                        <span class="text-xs text-slate-400 font-medium block">Fuel Level</span>
+                        <span class="micro-label !text-right">Fuel Level</span>
                         <span id="txt-fuel-level" class="text-xl font-bold font-mono">--%</span>
                     </div>
                 </div>
             </div>
 
             <!-- TRIP ODOMETER (separate box, directly below Fuel System) -->
-            <div id="card-trip-odometer" class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+            <div id="card-trip-odometer" class="dash-card p-5">
                 <div class="flex items-center justify-between mb-3">
-                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                    <span class="field-label flex items-center gap-2">
                         <i data-lucide="map" class="w-4 h-4 text-indigo-400"></i> Trip Odometer
                     </span>
-                    <button onclick="resetTripOdometer()" class="text-[10px] text-slate-500 hover:text-slate-300 underline underline-offset-2">Reset</button>
+                    <button onclick="resetTripOdometer()" class="text-[10px] text-slate-500 hover:text-slate-300 underline underline-offset-2 transition-colors">Reset</button>
                 </div>
-                <span id="txt-trip-distance" class="text-2xl font-bold font-mono text-white">0.00 <span class="text-xs text-slate-500 font-normal">km</span></span>
+                <span id="txt-trip-distance" class="text-2xl font-bold font-mono text-white">0.00 <span class="text-xs text-slate-500 font-medium">km</span></span>
             </div>
 
-            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+            <div class="dash-card p-5">
                 <div class="flex justify-between items-center">
                     <div class="flex items-center gap-3">
                         <i data-lucide="snowflake" class="w-5 h-5 text-sky-400"></i>
                         <span class="text-sm font-medium">Air Conditioning (AC)</span>
                     </div>
-                    <span id="badge-ac" class="px-2.5 py-1 text-xs font-bold rounded-full bg-slate-800 text-slate-500 border border-slate-700">--</span>
+                    <span id="badge-ac" class="chip chip-neutral">--</span>
                 </div>
             </div>
         </div>
 
         <!-- GPS TRACKING & TERMINAL PANEL -->
         <div class="space-y-6" id="branch-gps-ui">
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                <i data-lucide="map-pin" class="w-4 h-4 text-purple-500"></i> GPS Location Tracking
+            <h2 class="panel-heading">
+                <i data-lucide="map-pin" class="w-4 h-4 text-purple-400"></i> GPS Location Tracking
                 <span class="freshness-dot stale ml-auto" id="fresh-gps" title="Data freshness"></span>
             </h2>
 
-            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+            <div class="dash-card p-4 space-y-3">
                 <div class="flex items-center justify-between">
                     <span id="route-status" class="text-[10px] text-slate-500">Historical route not loaded</span>
-                    <button onclick="loadPastRoute()" id="btn-load-route" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold px-2.5 py-1 rounded-md transition flex items-center gap-1">
+                    <button onclick="loadPastRoute()" id="btn-load-route" class="btn-ghost btn-ghost-sm flex items-center gap-1">
                         <i data-lucide="route" class="w-3 h-3"></i> Load Past Route
                     </button>
                 </div>
-                <div id="map-frame" class="w-full h-64 rounded-lg border border-slate-800 z-10"></div>
-                <div id="card-gps-readout" class="grid grid-cols-2 gap-2 bg-slate-950 p-3 rounded-lg border border-slate-800/80 font-mono text-[11px]">
+                <div id="map-frame" class="w-full h-64 rounded-lg border border-slate-800/80 z-10"></div>
+                <div id="card-gps-readout" class="gps-readout grid grid-cols-2 gap-2">
                     <div>
-                        <span class="text-slate-500 block uppercase font-bold text-[9px]">Latitude</span>
-                        <span id="txt-lat" class="text-slate-400">--</span>
+                        <span class="micro-label !text-left">Latitude</span>
+                        <span id="txt-lat" class="readout !text-left">--</span>
                     </div>
                     <div>
-                        <span class="text-slate-500 block uppercase font-bold text-[9px]">Longitude</span>
-                        <span id="txt-lng" class="text-slate-400">--</span>
+                        <span class="micro-label !text-left">Longitude</span>
+                        <span id="txt-lng" class="readout !text-left">--</span>
                     </div>
                     <div>
-                        <span class="text-slate-500 block uppercase font-bold text-[9px]">Satellites</span>
-                        <span id="txt-sats" class="text-slate-400">--</span>
+                        <span class="micro-label !text-left">Satellites</span>
+                        <span id="txt-sats" class="readout !text-left">--</span>
                     </div>
                     <div>
-                        <span class="text-slate-500 block uppercase font-bold text-[9px]">Fix</span>
-                        <span id="txt-fix" class="text-rose-500">NO FIX</span>
+                        <span class="micro-label !text-left">Fix</span>
+                        <span id="txt-fix" class="readout !text-left text-rose-500">NO FIX</span>
                     </div>
                     <div class="col-span-2 flex items-center justify-between pt-2 mt-1 border-t border-slate-800/60">
                         <div>
-                            <span class="text-slate-500 block uppercase font-bold text-[9px]">GPS Speed (cross-check)</span>
-                            <span id="txt-gps-speed" class="text-slate-400">--</span>
+                            <span class="micro-label !text-left">GPS Speed (cross-check)</span>
+                            <span id="txt-gps-speed" class="readout !text-left">--</span>
                         </div>
                         <span id="txt-speed-delta" class="text-[10px] font-bold text-slate-600"></span>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
-                <span class="text-xs font-bold text-slate-400 block tracking-tight">Raw Serial RX Stream Payload Log</span>
-                <div class="bg-slate-950 rounded-lg p-3 h-28 font-mono text-[11px] text-blue-500 overflow-y-auto border border-slate-800/80 space-y-1" id="serial-terminal">
+            <div class="dash-card p-4 space-y-2">
+                <span class="field-label block">Raw Serial RX Stream Payload Log</span>
+                <div class="terminal" id="serial-terminal">
                     Disconnected. Initialize socket link to stream live hardware data frames...
                 </div>
             </div>
 
-            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+            <div class="dash-card p-5">
                 <div class="space-y-2">
-                    <label class="text-xs text-slate-400 font-medium block">Outbound Message Console (via SIM800L)</label>
+                    <label class="field-label block">Outbound Message Console (via SIM800L)</label>
                     <div class="flex gap-2">
-                        <input type="text" id="input-msg" placeholder="Type data stream payload..." class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500" />
-                        <button onclick="transmitDriverCommand()" class="bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs px-4 py-2 rounded-lg transition">Transmit</button>
+                        <input type="text" id="input-msg" placeholder="Type data stream payload..." class="dash-input flex-1" />
+                        <button onclick="transmitDriverCommand()" class="btn-primary">Transmit</button>
                     </div>
                 </div>
             </div>
@@ -289,15 +315,15 @@
 
     <!-- TRIP HISTORY MODAL -->
     <div id="modal-history" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
+        <div class="dash-card modal-panel w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
 
-            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-800 shrink-0">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-800/80 shrink-0">
                 <div class="flex items-center gap-2">
-                    <i data-lucide="history" class="w-5 h-5 text-blue-500"></i>
+                    <i data-lucide="history" class="w-5 h-5 text-accent"></i>
                     <h3 class="text-sm font-bold uppercase tracking-wider text-slate-200">Trip History</h3>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button onclick="loadTelemetryHistory()" id="btn-refresh-history" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg transition">Refresh</button>
+                    <button onclick="loadTelemetryHistory()" id="btn-refresh-history" class="btn-ghost btn-ghost-sm">Refresh</button>
                     <button onclick="closeHistoryModal()" class="text-slate-400 hover:text-slate-200 transition p-1" aria-label="Close">
                         <i data-lucide="x" class="w-5 h-5"></i>
                     </button>
@@ -305,8 +331,8 @@
             </div>
 
             <div class="flex gap-1 px-5 pt-3 shrink-0">
-                <button id="tab-btn-analytics" onclick="switchHistoryTab('analytics')" class="text-xs font-bold px-3 py-1.5 rounded-t-lg border-b-2 border-blue-500 text-blue-400 transition">Analytics</button>
-                <button id="tab-btn-triplog" onclick="switchHistoryTab('triplog')" class="text-xs font-bold px-3 py-1.5 rounded-t-lg border-b-2 border-transparent text-slate-500 hover:text-slate-300 transition">Trip Log</button>
+                <button id="tab-btn-analytics" onclick="switchHistoryTab('analytics')" class="tab-btn tab-btn-active">Analytics</button>
+                <button id="tab-btn-triplog" onclick="switchHistoryTab('triplog')" class="tab-btn tab-btn-inactive">Trip Log</button>
             </div>
 
             <div class="flex-1 overflow-y-auto p-5 min-h-0">
@@ -317,9 +343,9 @@
                 </div>
 
                 <div id="panel-triplog" class="hidden">
-                    <div class="max-h-96 overflow-y-auto border border-slate-800 rounded-lg">
+                    <div class="max-h-96 overflow-y-auto border border-slate-800/80 rounded-lg">
                         <table class="w-full text-xs font-mono">
-                            <thead class="bg-slate-950 sticky top-0">
+                            <thead class="bg-slate-950/80 sticky top-0">
                                 <tr class="text-slate-500 uppercase text-[10px]">
                                     <th class="text-left px-3 py-2 font-bold">Timestamp</th>
                                     <th class="text-left px-3 py-2 font-bold">Speed</th>
