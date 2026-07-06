@@ -181,28 +181,6 @@ function updateSummaryCards() {
 }
 
 // ======================================================
-// PLACEHOLDER FUNCTIONS
-// (Implemented in next parts)
-// ======================================================
-
-function drawCharts() {
-
-    console.log("Charts will be created in Part 4.2");
-
-}
-
-function renderSafetyEvents() {
-
-    console.log("Safety Events in Part 4.3");
-
-}
-
-function renderHistoryTable() {
-
-    console.log("History Table in Part 4.3");
-
-}
-// ======================================================
 // CHARTS
 // ======================================================
 
