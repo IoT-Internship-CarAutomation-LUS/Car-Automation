@@ -1,8 +1,23 @@
 # Backend Brief — LUS Car Automation
 
-**Owner: Person C.** This is the piece everything else depends on. Right now every module (GPS, OBD, TPMS, the platform) produces data with nowhere to go — the dashboards talk straight to the ESP32, so nothing is stored and nothing survives a refresh. Your job is to build the server that sits in the middle.
+> **STATUS: BUILT AND DEPLOYED.** This backend now exists and is live at
+> `api.nalusa.space` (WebSocket `wss://api.nalusa.space/ws`). It was built in
+> Python with **FastAPI + SQLite + WebSocket**, exposes the REST endpoints
+> listed in §2 Part C, and is exercised by three mock sender scripts
+> (`mock_telemetry.py`, `mock_rc_platform.py`, `mock_platform.py`). Both
+> dashboards connect to it. **The sections below are the original build brief,
+> kept as the design record** — read them as "why it's built this way," not as
+> "still to do." For the running system, see `backend/README.md` and the code
+> in `backend/`.
+>
+> **Open item (not yet done):** the project lead's direction was to eventually
+> stream via the company's own cloud + RDBMS. What's deployed today is
+> self-hosted (FastAPI + SQLite on our domain). Whether/when to migrate to the
+> company cloud is an unresolved decision awaiting his answer.
 
-Read the **Message Schema** doc first — your JSON in and out must match it exactly.
+**Owner: Shaahir.** This was the piece everything else depended on — before it existed, every module (GPS, OBD, TPMS, the platform) produced data with nowhere to go, the dashboards talked straight to the ESP32, and nothing was stored or survived a refresh. This brief defined the server that sits in the middle.
+
+The **Message Schema** (`docs/MESSAGE_SCHEMA.md`) is the contract — the backend's JSON in and out matches it exactly.
 
 ---
 
@@ -106,12 +121,14 @@ Storing the whole JSON blob per row is the fastest way to start and keeps you in
 
 ---
 
-## 7. Definition of done (v1)
+## 7. Definition of done (v1) — ACHIEVED
 
-- Dashboard connection indicator goes green (`/api/health` works).
-- A message sent by the fake sender appears live on both dashboards, through the backend.
-- That same message is in the database afterwards.
-- `/api/gps/track` returns a list Person A can draw as a trail.
-- A `command` from Dashboard 2 reaches the hardware side.
+All five original acceptance criteria are met by the deployed backend:
 
-When those five are true, the backbone of the whole project exists and every other track has somewhere to plug in.
+- ✅ Dashboard connection indicator goes green (`/api/health` works).
+- ✅ A message sent by a mock sender appears live on both dashboards, through the backend.
+- ✅ That same message is stored in the database afterwards.
+- ✅ `/api/gps/track` returns a list Dashboard 1 draws as a trail.
+- ✅ A `command` from Dashboard 2 is relayed to the platform/hardware side.
+
+The backbone of the project exists and every other track plugs into it. Remaining backend work is tracked as open items (company-cloud migration decision; replacing mock senders with real ESP32 firmware; optional auth on the endpoints).
