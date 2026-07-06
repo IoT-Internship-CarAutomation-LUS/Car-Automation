@@ -24,22 +24,45 @@ def make_telemetry():
     """Generate a realistic fake telemetry message."""
     now_ms = int(time.time() * 1000)
 
-    # Slowly drift GPS position to simulate movement
-    lat_drift = random.uniform(-0.0001, 0.0001)
-    lng_drift = random.uniform(-0.0001, 0.0001)
+    # GPS drift large enough (>0.002km/step) to trigger the trip odometer
+    lat_drift = random.uniform(-0.0004, 0.0004)
+    lng_drift = random.uniform(-0.0004, 0.0004)
+
+    # RPM: mostly normal, ~15% of ticks spike past redline (6500) to
+    # exercise the red badge and pulsing animation on the dashboard
+    rpm_profile = random.choices(
+        [random.randint(800, 5000), random.randint(6501, 7500)],
+        weights=[85, 15]
+    )[0]
+
+    # Fuel level: mostly OK, occasionally LOW/CRITICAL to test alert badges
+    fuel_profile = random.choices(
+        [random.randint(30, 90),  # OK  (green badge)
+         random.randint(11, 25), # LOW (amber badge)
+         random.randint(1, 10)], # CRITICAL (rose badge, pulsing)
+        weights=[70, 20, 10]
+    )[0]
+
+    # Brake: boolean for whether pedal is pressed + percentage depth.
+    # brake_pct feeds the new bar-brake progress bar and txt-brake-pct
+    # in the updated HTML ("Digital until hardware sends brake_pct").
+    # Correlated: pct is 0 when not braking, non-zero when braking.
+    brake_active = random.choice([False, False, False, True])
+    brake_pct = random.randint(20, 100) if brake_active else 0
 
     return {
         "type": "telemetry",
         "ts": now_ms,
         "vehicle": {
-            "rpm":                random.randint(800, 4000),
+            "rpm":                rpm_profile,
             "speed_kmh":          random.randint(0, 80),
             "gear":               random.randint(1, 5),
             "clutch_pct":         random.choice([0, 0, 0, 50, 100]),  # mostly released
-            "brake":              random.choice([False, False, False, True]),
+            "brake":              brake_active,
+            "brake_pct":          brake_pct,
             "throttle_pct":       random.randint(10, 60),
             "engine_load_pct":    random.randint(20, 70),
-            "fuel_level_pct":     random.randint(40, 90),
+            "fuel_level_pct":     fuel_profile,
             "fuel_mileage_kmpl":  round(random.uniform(10.0, 20.0), 1),
             "coolant_c":          random.randint(80, 100),
             "intake_temp_c":      random.randint(25, 45),
@@ -59,7 +82,7 @@ def make_telemetry():
             "lng":       round(BASE_LNG + lng_drift, 6),
             "speed_kmh": random.randint(0, 80),
             "sats":      random.randint(5, 10),
-            "fix":       True   # always True so the map trail draws
+            "fix":       True
         }
     }
 
