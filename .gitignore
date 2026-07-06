@@ -3,3 +3,4 @@ backend/__pycache__/database.cpython-310.pyc
 backend/__pycache__/main.cpython-310.pyc
 backend/__pycache__/routes.cpython-310.pyc
 backend/__pycache__/websocket_handler.cpython-310.pyc
+timetable.html
