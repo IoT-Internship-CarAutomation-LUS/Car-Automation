@@ -36,8 +36,11 @@ TEMPLATE_PATH = os.path.join(REPO_ROOT, "docs/day-reports/DAILY_TEMPLATE.md")
 OUT_DIR = os.path.join(REPO_ROOT, "docs/day-reports")
 
 
-def run(cmd):
-    return subprocess.run(cmd, shell=True, capture_output=True, text=True).stdout.strip()
+def run(cmd, check=False):
+    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    if check and result.returncode != 0:
+        raise RuntimeError(f"Command failed ({result.returncode}): {cmd}\n{result.stderr}")
+    return result.stdout.strip()
 
 
 def get_day_bounds(date_str, tz_name):
@@ -72,9 +75,22 @@ def get_all_commits():
     someone's work, we pull everything and filter it ourselves in Python,
     which has no such assumption.
     """
-    fmt = "%H|%an|%ad|%s"
+    fmt = "%H|%an|%cd|%s"
+    # %an = author name (who wrote it -- kept for attribution)
+    # %cd = COMMITTER date, not author date. Author date is set once when a
+    # commit is first written and does not change on rebase/amend; committer
+    # date updates to reflect when the commit actually became part of
+    # history. Since "Rebase and merge" is an allowed merge method on this
+    # repo, a rebase-merged commit can carry an author date from days before
+    # it actually landed on main. Bucketing by author date would silently
+    # file such a commit under a day whose report may already be finalized,
+    # and nothing ever automatically revisits it -- it would vanish from
+    # every daily report. Committer date reflects when it actually landed.
     cmd = f'git log --date=iso-strict --pretty=format:"{fmt}" --no-merges'
-    out = run(cmd)
+    # check=True: if this fails, we want the workflow to go red and be
+    # visibly investigated -- not silently report "0 commits" for the day,
+    # which could go unnoticed for the whole team.
+    out = run(cmd, check=True)
     commits = []
     if out:
         for line in out.split("\n"):
@@ -103,8 +119,13 @@ def filter_commits_for_day(all_commits, day_start, day_end, tz_name):
 
 
 def get_files_for_commit(h):
-    out = run(f"git show --name-only --pretty=format: {h}")
-    return [f for f in out.split("\n") if f.strip()]
+    result = subprocess.run(
+        f"git show --name-only --pretty=format: {h}", shell=True, capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        print(f"WARNING: could not list files for commit {h}: {result.stderr.strip()}", flush=True)
+        return []
+    return [f for f in result.stdout.strip().split("\n") if f.strip()]
 
 
 def top_folder(path):
