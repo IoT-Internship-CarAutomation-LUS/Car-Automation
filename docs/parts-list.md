@@ -1,8 +1,24 @@
-# Parts List
+# Parts List — Phase 1 (SUPERSEDED / historical)
 
-The full, formatted parts list with prices and all phases is the Word document shared with the team lead (`Parts_List_All_Phases.docx`).
+> **This is a past decision, kept for the record.** This parts list describes
+> the early **Phase 1 cheap servo-based proof-of-concept car** (~₹2,000),
+> which was the plan *before* the Day-6 project reframe.
+>
+> **It no longer reflects the current direction.** The self-driving work
+> (now "Track 2") was re-scoped: it is a capability-first build with **budget
+> no longer a constraint**, targeting a model car with A\* pathfinding,
+> collision detection/avoidance, and a proper compute brain
+> (Raspberry Pi + ESP32 motor/CAN controller, or an offboard-processing
+> alternative), with encoder motors (not servos), likely LiDAR for
+> localization + obstacle detection, IMU, and a camera.
+>
+> Use this file only as a record of the earlier thinking. The current Track 2
+> parts direction will be captured in a new parts document. The Phase 1
+> servo approach below is **not** what to buy for the self-driving build.
 
-## Summary
+---
+
+## Summary (Phase 1 — historical)
 
 **Phase 1 — CAN-controlled proof-of-concept car (do first)** — approx ₹2,000 new parts, reusing the 2× ESP32, 2× MCP2515 CAN modules, and NEO-6M GPS we already own.
 - 2× continuous-rotation servos (drive), wheels + castor
