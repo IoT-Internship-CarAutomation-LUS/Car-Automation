@@ -12,7 +12,7 @@ This is the team's single source of truth. Every track has a folder here; overal
 |-------|-------|--------|--------|-------|
 | Dashboard 1 — Telemetry Monitor | Sapthagiri | `dashboard-telemetry/` | 🟢 Deployed | lus.nalusa.space — built, bound to schema |
 | Dashboard 2 — Control Console | Sathish | `dashboard-control/` | 🟢 Deployed | dashboard2.nalusa.space — built, bound to schema |
-| Backend / streaming | Shaahir | `backend/` | 🟡 Planning | Moving to company cloud API + RDBMS |
+| Backend / streaming | Shaahir | `backend/` | 🟢 Deployed | api.nalusa.space — FastAPI + SQLite, built and running; company cloud migration is an open future item |
 | Platform hardware / parts | Venkat | `hardware/` | 🟡 Research | Parts list ready; awaiting budget sign-off |
 | Real-car sensing (ELM327 / TPMS) | Pavan | `sensing/` | 🟡 Early research | In-house direct-wire approach (no Bluetooth app) |
 | Firmware (GPS / CAN / motor node) | Shared | `firmware/` | 🟢 Bring-up done | GPS + CAN loopback working on Board 2 |
@@ -26,7 +26,7 @@ Legend: 🟢 done / working · 🟡 in progress · 🔴 blocked · ⚪ not start
 
 | # | Objective | Status |
 |---|-----------|--------|
-| — | Backend server + API (all data flows here) | 🟡 Planning (company cloud) |
+| — | Backend server + API (all data flows here) | 🟢 Built and deployed (api.nalusa.space) — company cloud migration open |
 | I | GPS live location | 🟢 Hardware done |
 | II | Camera (lane / drowsiness detection) | ⚪ Parked — later phase (needs Pi/phone-class vision) |
 | III | Real-time OBD data (RPM, load, speed, etc.) | 🟡 Partial — CAN proven, ELM327 pending |
@@ -37,10 +37,10 @@ Legend: 🟢 done / working · 🟡 in progress · 🔴 blocked · ⚪ not start
 ## How it fits together
 
 ```
-  HARDWARE                          BACKEND (company cloud)        DASHBOARDS
+  HARDWARE                          BACKEND (api.nalusa.space)      DASHBOARDS
   ------------------------          -----------------------        ---------------------------
   Built platform (Track B)  ─┐
-    ESP32 + MCP2515 → CAN    │      API endpoint + RDBMS           Dashboard 1 (Telemetry)
+    ESP32 + MCP2515 → CAN    │      FastAPI + SQLite               Dashboard 1 (Telemetry)
     → motor node → servos    ├──▶   - stores telemetry      ──▶    lus.nalusa.space
                              │      - streams to dashboards
   Real-car sensing (Track A) │                                     Dashboard 2 (Control)
@@ -48,6 +48,8 @@ Legend: 🟢 done / working · 🟡 in progress · 🔴 blocked · ⚪ not start
                              │      commands flow back down ◀── from Dashboard 2
   GPS (NEO-6M)  ─────────────┘
 ```
+
+Backend hosting on the company cloud (managed API endpoint + cloud RDBMS instead of self-hosted SQLite) is an open future item — see `backend/README.md`.
 
 Data travels as **compact binary** (32-byte vehicle + 16-byte tyre packets) on the hardware link, and is unpacked into **JSON** once at the ESP32/backend boundary. Dashboards only ever see JSON. See [`docs/MESSAGE_SCHEMA.md`](docs/MESSAGE_SCHEMA.md) — the single source of truth for the data format.
 
@@ -60,7 +62,7 @@ Data travels as **compact binary** (32-byte vehicle + 16-byte tyre packets) on t
 | `docs/` | Planning docs, message schema, parts list, daily reports |
 | `dashboard-telemetry/` | Dashboard 1 — real-car telemetry monitor |
 | `dashboard-control/` | Dashboard 2 — vehicle control console |
-| `backend/` | Streaming API + storage (company cloud) |
+| `backend/` | Streaming API + storage — FastAPI + SQLite, deployed at api.nalusa.space |
 | `firmware/` | ESP32 sketches — GPS/CAN bring-up, platform motor node |
 | `hardware/` | Chassis, parts, wiring diagrams, build photos |
 | `sensing/` | ELM327 / TPMS decoding, payload notes |
