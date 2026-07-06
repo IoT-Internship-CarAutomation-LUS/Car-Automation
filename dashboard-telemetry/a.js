@@ -20,6 +20,41 @@ let historyChartInstance = null;
 let historyRecordsCache = null;
 
 // ==========================================
+// DASHBOARD ALERT THRESHOLDS
+// Tune these to match the actual vehicle if they differ.
+// ==========================================
+const RPM_REDLINE = 6500;        // RPM
+const FUEL_LOW_PCT = 25;         // amber warning at/below this level
+const FUEL_CRITICAL_PCT = 10;    // rose/critical alert at/below this level
+
+// ==========================================
+// TRIP ODOMETER
+// No odometer field exists in the telemetry schema, so distance is
+// accumulated client-side from consecutive GPS fixes (haversine). Resets
+// on reconnect or via the manual "Reset" control in the GPS panel.
+// ==========================================
+let tripDistanceKm = 0;
+let lastOdometerPoint = null; // {lat, lng} of the last fix counted
+const MIN_ODOMETER_STEP_KM = 0.002; // ~2m: ignores GPS jitter while stationary
+
+function haversineDistanceKm(lat1, lng1, lat2, lng2) {
+    const R = 6371; // Earth radius, km
+    const toRad = (deg) => deg * (Math.PI / 180);
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function resetTripOdometer() {
+    tripDistanceKm = 0;
+    lastOdometerPoint = null;
+    const el = document.getElementById('txt-trip-distance');
+    if (el) el.innerText = '0.00 km';
+}
+
+// ==========================================
 // FRESHNESS TRACKING
 // Per MESSAGE_SCHEMA.md section 1: every message carries `ts` (ms epoch).
 // If now - ts > STALE_THRESHOLD_MS, the panel is considered stale and
@@ -112,7 +147,7 @@ function initializeGpsMap() {
 // opposed to controls, like the SIM800L message console, which stays
 // interactive regardless of telemetry staleness).
 const STALE_CARD_IDS = {
-    vehicle: ['card-vehicle-primary', 'card-vehicle-secondary', 'card-fuel', 'card-engine-health'],
+    vehicle: ['card-vehicle-primary', 'card-gear-clutch', 'card-brake', 'card-fuel', 'card-engine-health'],
     tyres: ['card-tyres'],
     gps: ['card-gps-readout']
 };
@@ -167,6 +202,9 @@ function connectHardwareStream() {
     lastSeenTs.tyres = 0;
     lastSeenTs.gps = 0;
     lastVehicleSpeedKmh = null;
+    resetTripOdometer();
+    const lastUpdateEl = document.getElementById('txt-last-update');
+    if (lastUpdateEl) lastUpdateEl.innerText = '--:--:--';
     if (chartInstance) {
         chartInstance.data.datasets[0].data = Array(25).fill(0);
         chartInstance.update('none');
@@ -251,6 +289,11 @@ function processIncomingMessage(rawPayloadString) {
 function applyTelemetryPacket(dataPacket) {
     const packetTs = dataPacket.ts || Date.now();
 
+    const lastUpdateEl = document.getElementById('txt-last-update');
+    if (lastUpdateEl) {
+        lastUpdateEl.innerText = new Date(packetTs).toLocaleTimeString();
+    }
+
     if (dataPacket.vehicle) {
         lastSeenTs.vehicle = packetTs;
         applyVehicleData(dataPacket.vehicle);
@@ -287,7 +330,20 @@ function applyVehicleData(vehicle) {
         chartInstance.update('none');
     }
     if (vehicle.rpm !== undefined) {
-        document.getElementById('txt-rpm').innerText = vehicle.rpm === null ? '--' : vehicle.rpm.toLocaleString();
+        const txtRpm = document.getElementById('txt-rpm');
+        const redlineBadge = document.getElementById('badge-redline');
+        if (vehicle.rpm === null) {
+            txtRpm.innerText = '--';
+            txtRpm.className = 'text-4xl font-extrabold text-white font-mono';
+            redlineBadge.classList.add('hidden');
+        } else {
+            txtRpm.innerText = vehicle.rpm.toLocaleString();
+            const overRedline = vehicle.rpm > RPM_REDLINE;
+            txtRpm.className = overRedline
+                ? 'text-4xl font-extrabold text-rose-500 font-mono animate-pulse'
+                : 'text-4xl font-extrabold text-white font-mono';
+            redlineBadge.classList.toggle('hidden', !overRedline);
+        }
     }
     if (vehicle.gear !== undefined) {
         document.getElementById('txt-gear').innerText = vehicle.gear === null ? '-' : (vehicle.gear === 0 ? 'N' : vehicle.gear);
@@ -297,6 +353,21 @@ function applyVehicleData(vehicle) {
     }
     if (vehicle.fuel_level_pct !== undefined) {
         document.getElementById('txt-fuel-level').innerText = `${fmt(vehicle.fuel_level_pct, 0)}%`;
+
+        const fuelBadge = document.getElementById('badge-fuel-alert');
+        if (vehicle.fuel_level_pct === null) {
+            fuelBadge.innerText = '--';
+            fuelBadge.className = 'px-2.5 py-1 text-[10px] font-bold rounded-full bg-slate-800 text-slate-500 border border-slate-700';
+        } else if (vehicle.fuel_level_pct <= FUEL_CRITICAL_PCT) {
+            fuelBadge.innerText = 'CRITICAL';
+            fuelBadge.className = 'px-2.5 py-1 text-[10px] font-bold rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 animate-pulse';
+        } else if (vehicle.fuel_level_pct <= FUEL_LOW_PCT) {
+            fuelBadge.innerText = 'LOW FUEL';
+            fuelBadge.className = 'px-2.5 py-1 text-[10px] font-bold rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20';
+        } else {
+            fuelBadge.innerText = 'OK';
+            fuelBadge.className = 'px-2.5 py-1 text-[10px] font-bold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+        }
     }
     if (vehicle.clutch_pct !== undefined) {
         const clutchVal = vehicle.clutch_pct === null ? 0 : vehicle.clutch_pct;
@@ -462,6 +533,17 @@ function applyGpsData(gps) {
 
     markerInstance.setLatLng(geographicCoordinates);
     mapInstance.setView(geographicCoordinates, 16); // Direct zoom locking update on target host tracking focus
+
+    // Trip odometer: accumulate distance between consecutive fixes.
+    // Small deltas are ignored as GPS jitter rather than real movement.
+    if (lastOdometerPoint) {
+        const stepKm = haversineDistanceKm(lastOdometerPoint.lat, lastOdometerPoint.lng, gps.lat, gps.lng);
+        if (stepKm >= MIN_ODOMETER_STEP_KM) {
+            tripDistanceKm += stepKm;
+            document.getElementById('txt-trip-distance').innerText = `${tripDistanceKm.toFixed(2)} km`;
+        }
+    }
+    lastOdometerPoint = { lat: gps.lat, lng: gps.lng };
 
     // Breadcrumb trail: append and cap
     trailPoints.push(geographicCoordinates);
