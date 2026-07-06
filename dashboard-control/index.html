@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Prevent browser/CDN caching of stale HTML -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>VEHICLE CONTROL CONSOLE</title>
 
     <!-- External Dependencies via CDN (same stack as Telemetry Dashboard) -->
@@ -10,7 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <link rel="stylesheet" href="control-console.css">
+    <link rel="stylesheet" href="control-console.css?v=2.0.0">
 
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
@@ -215,6 +219,6 @@
         </div>
     </main>
 
-    <script src="control-console.js"></script>
+    <script src="control-console.js?v=2.0.0"></script>
 </body>
 </html>
