@@ -1,23 +1,404 @@
-/* Custom resets to bridge custom layout adjustments with utility components */
+/* ==========================================
+   DESIGN TOKENS
+   A quiet, instrument-panel palette: near-black surface, cool graphite
+   borders, one confident accent (electric indigo) reserved for live
+   state and interactive elements. Warning/danger colors are desaturated
+   just enough to sit calmly until something actually needs attention.
+   ========================================== */
+:root {
+    --bg: #0a0c11;
+    --surface: #12151d;
+    --surface-2: #171b25;
+    --border: #232838;
+    --border-soft: #1a1e2a;
+    --text-primary: #e9ebf1;
+    --text-secondary: #8890a4;
+    --text-tertiary: #565e73;
+
+    --accent: #5b7cfa;
+    --accent-soft: rgba(91, 124, 250, 0.14);
+    --accent-dim: #3d4e8f;
+
+    --warn: #e8a13c;
+    --warn-soft: rgba(232, 161, 60, 0.12);
+    --danger: #ef5c72;
+    --danger-soft: rgba(239, 92, 114, 0.12);
+    --success: #3ecf8e;
+    --success-soft: rgba(62, 207, 142, 0.12);
+}
+
+/* Base surface: replace the flat Tailwind slate with a subtle vignette
+   so the dashboard reads as one deliberate instrument panel rather than
+   a stack of default-grey cards. body.bg-slate-950 keeps specificity
+   high enough to win over the Tailwind utility it pairs with. */
+body.bg-slate-950 {
+    background:
+        radial-gradient(ellipse 900px 500px at 15% -10%, rgba(91, 124, 250, 0.07), transparent 60%),
+        radial-gradient(ellipse 700px 500px at 100% 0%, rgba(62, 207, 142, 0.045), transparent 55%),
+        var(--bg);
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+}
+
+.text-accent { color: var(--accent); }
+
+/* ==========================================
+   HEADER
+   ========================================== */
+.dash-header {
+    background: rgba(18, 21, 29, 0.72);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.brand-mark {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(150deg, var(--accent), #3d54b8);
+    color: #fff;
+    box-shadow: 0 4px 14px -4px rgba(91, 124, 250, 0.55);
+}
+
+.status-pill {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.03em;
+}
+.status-offline { color: var(--danger); }
+
+/* ==========================================
+   FORM CONTROLS & BUTTONS
+   ========================================== */
+.dash-input {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 0.5rem 0.75rem;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    transition: border-color 0.15s ease;
+}
+.dash-input:focus {
+    outline: none;
+    border-color: var(--accent-dim);
+    color: var(--text-primary);
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+    font-size: 12px;
+    padding: 0.5rem 1rem;
+    border-radius: 9px;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+}
+.btn-primary:hover { background: #4a6bf0; }
+.btn-primary:active { transform: translateY(1px); }
+
+.btn-ghost {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 12px;
+    padding: 0.5rem 1rem;
+    border-radius: 9px;
+    transition: border-color 0.15s ease, color 0.15s ease;
+}
+.btn-ghost:hover { border-color: var(--accent-dim); color: var(--text-primary); }
+.btn-ghost-sm { font-size: 10.5px; padding: 0.4rem 0.7rem; }
+
+/* ==========================================
+   CARDS & STRUCTURE
+   ========================================== */
+.dash-card {
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    transition: opacity 0.4s ease, filter 0.4s ease, border-color 0.2s ease;
+}
+
+.panel-heading {
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.field-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+}
+
+.micro-label {
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-tertiary);
+    display: block;
+    text-align: center;
+}
+
+.readout {
+    display: block;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 14px;
+    font-weight: 600;
+    color: #c4c9d6;
+    text-align: center;
+    margin-top: 2px;
+}
+
+.gear-readout {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 2.75rem;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+}
+
+/* ==========================================
+   TWIN INSTRUMENT DIALS (speed / rpm)
+   Signature element: a conic-gradient ring reads the value at a glance,
+   the exact number sits underneath — the dashboard's one deliberate
+   "instrument cluster" moment.
+   ========================================== */
+.instrument {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.dial {
+    --pct: 0;
+    width: 116px;
+    height: 116px;
+    border-radius: 50%;
+    padding: 5px;
+    background: conic-gradient(var(--accent) calc(var(--pct) * 1%), var(--border) 0);
+    transition: background 0.25s ease;
+}
+
+.dial-face {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+.dial-value {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 1.85rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.dial-unit {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text-tertiary);
+    margin-top: 4px;
+}
+
+.dial-redline {
+    background: conic-gradient(var(--danger) calc(var(--pct) * 1%), var(--border) 0);
+}
+.dial-redline .dial-value { color: var(--danger); }
+.dial-redline .dial-face { animation: redline-pulse 1s ease-in-out infinite; }
+
+@keyframes redline-pulse {
+    0%, 100% { box-shadow: inset 0 2px 10px rgba(0,0,0,0.35), 0 0 0 0 rgba(239, 92, 114, 0.4); }
+    50% { box-shadow: inset 0 2px 10px rgba(0,0,0,0.35), 0 0 0 6px rgba(239, 92, 114, 0); }
+}
+
+.instrument-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-tertiary);
+    text-align: center;
+}
+
+.redline-chip {
+    padding: 1px 6px;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    border-radius: 999px;
+    background: var(--danger-soft);
+    color: var(--danger);
+    border: 1px solid rgba(239, 92, 114, 0.35);
+}
+
+/* ==========================================
+   METERS (clutch / brake progress bars)
+   ========================================== */
+.meter {
+    width: 100%;
+    background: var(--surface-2);
+    height: 8px;
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid var(--border-soft);
+}
+.meter-fill {
+    height: 100%;
+    transition: width 0.15s ease;
+    border-radius: 999px;
+}
+.meter-fill-accent { background: var(--accent); }
+.meter-fill-danger { background: var(--danger); }
+
+/* ==========================================
+   CHIPS / BADGES
+   ========================================== */
+.chip {
+    padding: 3px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    border-radius: 999px;
+    border: 1px solid transparent;
+}
+.chip-neutral { background: var(--surface-2); color: var(--text-tertiary); border-color: var(--border); }
+
+/* ==========================================
+   TYRE CHASSIS DIAGRAM
+   ========================================== */
+.chassis-outline {
+    width: 96px;
+    height: 176px;
+    border: 3px solid var(--border);
+    border-radius: 20px;
+    position: relative;
+}
+.chassis-spine {
+    width: 3px;
+    height: 128px;
+    background: var(--border);
+    border-radius: 4px;
+}
+.chassis-axle {
+    width: 80px;
+    height: 3px;
+    background: var(--border);
+    position: absolute;
+}
+.tyre-block {
+    position: absolute;
+    width: 11px;
+    height: 30px;
+    border-radius: 4px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.tyre-fl { top: 1rem; left: -0.85rem; }
+.tyre-fr { top: 1rem; right: -0.85rem; }
+.tyre-rl { bottom: 1rem; left: -0.85rem; }
+.tyre-rr { bottom: 1rem; right: -0.85rem; }
+
+/* ==========================================
+   ICON TILES
+   ========================================== */
+.icon-tile {
+    padding: 0.6rem;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.icon-tile-amber { background: var(--warn-soft); color: var(--warn); }
+
+/* ==========================================
+   GPS READOUT BLOCK
+   ========================================== */
+.gps-readout {
+    background: var(--bg);
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    padding: 0.75rem;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px;
+}
+.gps-readout .micro-label,
+.gps-readout .readout { text-align: left; }
+
+/* ==========================================
+   TERMINAL / LOG
+   ========================================== */
+.terminal {
+    background: var(--bg);
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    padding: 0.75rem;
+    height: 7rem;
+    overflow-y: auto;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--accent);
+}
 
 #map-frame {
-    background-color: #020617; /* Matches slate-950 background color to prevent bright grey tile flash */
+    background-color: var(--bg); /* prevents bright grey tile flash before Leaflet tiles load */
 }
+
+/* ==========================================
+   MODAL
+   ========================================== */
+.modal-panel {
+    border-radius: 18px;
+    box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.6);
+}
+
+.tab-btn {
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 0.4rem 0.75rem;
+    border-radius: 8px 8px 0 0;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+.tab-btn-active { border-color: var(--accent); color: var(--accent); }
+.tab-btn-inactive { color: var(--text-tertiary); }
+.tab-btn-inactive:hover { color: var(--text-secondary); }
 
 /* Scrollbar styling for the hardware serial rx logger terminal window */
 #serial-terminal::-webkit-scrollbar {
     width: 6px;
 }
-
 #serial-terminal::-webkit-scrollbar-track {
-    background: #020617;
+    background: var(--bg);
 }
-
 #serial-terminal::-webkit-scrollbar-thumb {
-    background: #1e293b;
+    background: var(--border);
     border-radius: 4px;
 }
-
 #serial-terminal::-webkit-scrollbar-thumb:hover {
     background: #334155;
 }
@@ -29,21 +410,21 @@
    .stale  = no update within threshold, or never connected
    ========================================== */
 .freshness-dot {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: 9999px;
     display: inline-block;
     transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .freshness-dot.fresh {
-    background-color: #34d399; /* emerald-400 */
-    box-shadow: 0 0 6px 1px rgba(52, 211, 153, 0.7);
+    background-color: var(--success);
+    box-shadow: 0 0 6px 1px rgba(62, 207, 142, 0.6);
     animation: freshness-pulse 1.6s ease-in-out infinite;
 }
 
 .freshness-dot.stale {
-    background-color: #475569; /* slate-600 */
+    background-color: #3a3f4d;
     box-shadow: none;
 }
 
@@ -52,12 +433,11 @@
     50% { opacity: 0.4; }
 }
 
-/* Values greyed out when their parent panel goes stale.
-   Applied to card containers (not individual spans), so it must work
-   regardless of each child's own Tailwind text-color class -- opacity +
-   grayscale dims everything inside without fighting inherited `color`. */
+/* Values greyed out when their parent panel goes stale. Applied to card
+   containers (not individual spans), so it works regardless of each
+   child's own color -- opacity + grayscale dims everything inside
+   without fighting inherited `color`. */
 .value-stale {
-    opacity: 0.45;
-    filter: grayscale(0.6);
-    transition: opacity 0.4s ease, filter 0.4s ease;
+    opacity: 0.4;
+    filter: grayscale(0.7);
 }
