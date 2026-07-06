@@ -1,0 +1,89 @@
+name: Daily Activity Digest
+
+# When this runs:
+#   1. Automatically every evening (schedule below) -- catch-all for the day.
+#   2. Automatically whenever a Pull Request is merged -- so the log fills in
+#      as work actually lands, not just once at night.
+#   3. On demand -- click "Run workflow" on the Actions tab any time (e.g.
+#      right before an end-of-day team check-in).
+#
+# What it does NOT do: write the "what worked / what didn't / output" notes.
+# Only git history is objective enough to automate; the narrative is added
+# by the team in docs/day-reports/<date>.md, in the section below the
+# automated log. Re-running this workflow never touches those manual notes.
+
+on:
+  schedule:
+    # 15:30 UTC = 21:00 IST (9 PM). Adjust if your team is in a different timezone.
+    - cron: '30 15 * * *'
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Backfill a specific date (YYYY-MM-DD). Leave blank to run for today.'
+        required: false
+        type: string
+
+# Needed so the workflow can commit the updated report back to the repo.
+permissions:
+  contents: write
+  pull-requests: read
+
+# Prevents two runs from colliding if a PR merges right as the nightly run fires.
+concurrency:
+  group: daily-digest
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    # Skip if a PR was closed WITHOUT merging -- we only care about work that
+    # actually landed on main.
+    if: github.event_name != 'pull_request' || github.event.pull_request.merged == true
+    steps:
+      - name: Check out main (full history)
+        uses: actions/checkout@v4
+        with:
+          ref: main            # always operate on main's real tip, not the
+                                # PR preview merge ref pull_request events
+                                # default to -- avoids reading/pushing the
+                                # wrong commit.
+          fetch-depth: 0        # full history is required -- the digest reads
+                                # the complete git log and filters it itself.
+          token: ${{ secrets.DIGEST_PUSH_TOKEN }}
+                                # The default GITHUB_TOKEN pushes as the
+                                # github-actions[bot] identity, which the
+                                # ruleset's role-based bypass list cannot
+                                # cover (bypass roles only recognize human
+                                # collaborators, and this org's plan doesn't
+                                # offer "GitHub Actions" as a bypass actor).
+                                # A personal access token belonging to a repo
+                                # admin makes the push count as that admin,
+                                # which the "Repository admin" bypass role
+                                # already covers.
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Generate digest (today, or a backfilled date if provided)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "${{ inputs.date }}" ]; then
+            echo "Backfilling ${{ inputs.date }}"
+            python3 scripts/generate_daily_digest.py --date "${{ inputs.date }}" --tz Asia/Kolkata
+          else
+            python3 scripts/generate_daily_digest.py --tz Asia/Kolkata
+          fi
+
+      - name: Commit the updated report (if anything changed)
+        run: |
+          git config user.name "daily-digest-bot"
+          git config user.email "actions@github.com"
+          git add docs/day-reports/
+          git diff --cached --quiet || git commit -m "docs: update daily activity digest [automated]"
+          git push
