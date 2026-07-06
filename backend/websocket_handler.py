@@ -10,6 +10,7 @@
 import json
 from fastapi import WebSocket, WebSocketDisconnect
 from database import save_telemetry, save_platform_status
+import config
 
 # Set of all currently connected WebSocket clients
 connected_clients: set[WebSocket] = set()
@@ -35,6 +36,11 @@ async def websocket_endpoint(websocket: WebSocket):
 
             msg_type = message.get("type")
             ts = message.get("ts", 0)
+            schema_ver = message.get("schema_version")
+
+            if schema_ver != config.SCHEMA_VERSION:
+                print(f"[WS] ⚠ SCHEMA MISMATCH: Client {client.host} sent version '{schema_ver}' (expected '{config.SCHEMA_VERSION}'). Forwarding as-is.")
+
 
             # ── Route by message type ──────────────────────────────────────
             if msg_type == "telemetry":
