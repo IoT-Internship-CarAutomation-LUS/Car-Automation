@@ -41,6 +41,10 @@ BACKEND_WS_URL  = "wss://api.nalusa.space/ws"
 CSV_LOG_PATH    = "obd_session.csv"          # local backup file, created in cwd
 SCHEMA_VERSION  = "1.0.0"
 
+# Set False to run fully offline (CSV only, no backend needed).
+# Useful for testing the ELM327 connection and decoder without internet.
+SEND_TO_BACKEND = True
+
 # GPS placeholder -- replace with real GPS module values when available
 GPS_PLACEHOLDER = {
     "lat":       0.0,
@@ -220,87 +224,109 @@ async def send_to_backend(ws, packet_json: dict):
 async def run():
     csv_writer = init_csv(CSV_LOG_PATH)
 
-    print(f"[WS] Connecting to backend at {BACKEND_WS_URL} ...")
-    async with websockets.connect(BACKEND_WS_URL, ping_interval=None) as ws:
-        print("[WS] Connected to backend.")
+    # Try to connect to backend WebSocket -- but don't block polling if it fails
+    ws = None
+    if SEND_TO_BACKEND:
+        try:
+            ws = await websockets.connect(BACKEND_WS_URL, ping_interval=None)
+            print(f"[WS] Connected to backend at {BACKEND_WS_URL}")
+        except Exception as e:
+            print(f"[WS] Could not connect to backend: {e}")
+            print("[WS] Running in offline mode -- CSV only.")
+            ws = None
 
-        # Outer loop: handles Bluetooth disconnects and re-init
-        while True:
-            ser = open_port()
-            ok = initialise_elm327(ser)
-            if not ok:
-                print("[BT] Re-init failed. Closing port and retrying in 5s...")
-                ser.close()
-                time.sleep(5)
-                continue
+    # Outer loop: handles Bluetooth disconnects and re-init
+    while True:
+        ser = open_port()
+        ok = initialise_elm327(ser)
+        if not ok:
+            print("[BT] Re-init failed. Closing port and retrying in 5s...")
+            ser.close()
+            time.sleep(5)
+            continue
 
-            print(f"[OBD] Starting polling loop (1 cycle per {POLL_INTERVAL}s)...")
+        print(f"[OBD] Starting polling loop (1 cycle per {POLL_INTERVAL}s)...")
+        if not SEND_TO_BACKEND:
+            print("[OBD] OFFLINE MODE -- data written to CSV only.")
 
-            # Inner loop: one full polling cycle per iteration
+        # Inner loop: one full polling cycle per iteration
+        try:
+            while True:
+                cycle_start = time.time()
+                ts_ms = int(time.time() * 1000)
+
+                # Poll all 8 PIDs sequentially
+                decoded = {}
+                for pid in TARGET_PIDS:
+                    raw_hex = query_pid(ser, pid)
+                    decoded[pid] = decode_pid(raw_hex)
+
+                # Print live terminal readout
+                print(
+                    f"[OBD] RPM={decoded.get(0x0C)} "
+                    f"spd={decoded.get(0x0D)}km/h "
+                    f"cool={decoded.get(0x05)}C "
+                    f"fuel={decoded.get(0x2F)}% "
+                    f"maf={decoded.get(0x10)}"
+                )
+
+                # Pack into 32-byte binary, then unpack to JSON dict
+                raw_bytes   = pack_packet(decoded, GPS_PLACEHOLDER)
+                vehicle_gps = unpack_packet(raw_bytes)
+
+                # Build the full telemetry JSON envelope
+                telemetry_packet = {
+                    "type":           "telemetry",
+                    "schema_version": SCHEMA_VERSION,
+                    "ts":             ts_ms,
+                    "vehicle":        vehicle_gps["vehicle"],
+                    "tyres": {
+                        # TPMS data not yet wired -- send null placeholders
+                        "fl": None, "fr": None, "rl": None, "rr": None,
+                    },
+                    "gps": vehicle_gps["gps"],
+                }
+
+                # 1. Send to backend WebSocket (best-effort -- skip if down)
+                if SEND_TO_BACKEND:
+                    if ws is None or ws.closed:
+                        # Try to reconnect to backend
+                        try:
+                            ws = await websockets.connect(BACKEND_WS_URL, ping_interval=None)
+                            print("[WS] Reconnected to backend.")
+                        except Exception:
+                            print("[WS] Backend still unreachable -- CSV only this tick.")
+                    if ws is not None and not ws.closed:
+                        try:
+                            await ws.send(json.dumps(telemetry_packet))
+                        except Exception as e:
+                            print(f"[WS] Send failed: {e} -- CSV only this tick.")
+                            ws = None
+
+                # 2. Always append to local CSV backup
+                log_csv(csv_writer, ts_ms, decoded)
+
+                # Wait until next cycle window
+                elapsed = time.time() - cycle_start
+                sleep_for = max(0, POLL_INTERVAL - elapsed)
+                await asyncio.sleep(sleep_for)
+
+        except serial.SerialException as e:
+            print(f"[BT] Connection lost: {e}")
+            print("[BT] Waiting 3s then reconnecting...")
             try:
-                while True:
-                    cycle_start = time.time()
-                    ts_ms = int(time.time() * 1000)
-
-                    # Poll all 8 PIDs sequentially
-                    decoded = {}
-                    for pid in TARGET_PIDS:
-                        raw_hex = query_pid(ser, pid)
-                        decoded[pid] = decode_pid(raw_hex)
-
-                    # Print live terminal readout
-                    print(
-                        f"[OBD] RPM={decoded.get(0x0C)} "
-                        f"spd={decoded.get(0x0D)}km/h "
-                        f"cool={decoded.get(0x05)}C "
-                        f"fuel={decoded.get(0x2F)}% "
-                        f"maf={decoded.get(0x10)}"
-                    )
-
-                    # Pack into 32-byte binary, then unpack to JSON dict
-                    raw_bytes   = pack_packet(decoded, GPS_PLACEHOLDER)
-                    vehicle_gps = unpack_packet(raw_bytes)
-
-                    # Build the full telemetry JSON envelope
-                    telemetry_packet = {
-                        "type":           "telemetry",
-                        "schema_version": SCHEMA_VERSION,
-                        "ts":             ts_ms,
-                        "vehicle":        vehicle_gps["vehicle"],
-                        "tyres": {
-                            # TPMS data not yet wired -- send null placeholders
-                            "fl": None, "fr": None, "rl": None, "rr": None,
-                        },
-                        "gps": vehicle_gps["gps"],
-                    }
-
-                    # 1. Send to backend WebSocket
-                    await send_to_backend(ws, telemetry_packet)
-
-                    # 2. Append to local CSV backup
-                    log_csv(csv_writer, ts_ms, decoded)
-
-                    # Wait until next cycle window
-                    elapsed = time.time() - cycle_start
-                    sleep_for = max(0, POLL_INTERVAL - elapsed)
-                    await asyncio.sleep(sleep_for)
-
-            except serial.SerialException as e:
-                print(f"[BT] Connection lost: {e}")
-                print("[BT] Waiting 3s then reconnecting...")
-                try:
-                    ser.close()
-                except Exception:
-                    pass
-                time.sleep(3)
-                # Falls back to outer while loop to re-open port and re-init
+                ser.close()
+            except Exception:
+                pass
+            time.sleep(3)
+            # Falls back to outer while loop to re-open port and re-init
 
 
 if __name__ == "__main__":
     print("=" * 55)
     print("  ELM327 Bluetooth OBD-II Acquisition Script")
     print(f"  COM Port : {COM_PORT}  |  Baud: {BAUD_RATE}")
-    print(f"  Backend  : {BACKEND_WS_URL}")
+    print(f"  Backend  : {'DISABLED (offline mode)' if not SEND_TO_BACKEND else BACKEND_WS_URL}")
     print(f"  CSV Log  : {CSV_LOG_PATH}")
     print("=" * 55)
     try:
