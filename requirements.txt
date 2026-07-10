@@ -1,0 +1,14 @@
+# LUS Car Automation -- Requirements
+# Install all dependencies with:
+#   pip install -r requirements.txt
+
+# ── 1. Bluetooth & OBD-II Hardware Acquisition (`elm327_bt.py`) ─────────────────
+pyserial>=3.5
+
+# ── 2. WebSocket Client & Streaming (`elm327_bt.py --stream`, mock scripts) ─────
+websockets>=15.0
+
+# ── 3. Cloud Backend & API Server (`main.py`, `routes.py`, `websocket_handler`) ─
+fastapi>=0.110.0
+uvicorn>=0.29.0
+pydantic>=2.0
