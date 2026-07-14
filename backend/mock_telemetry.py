@@ -14,6 +14,7 @@ import random
 import websockets
 
 BACKEND_WS_URL = "ws://localhost:8000/ws"
+SCHEMA_VERSION = "1.0.0"
 
 # Base GPS position (Chennai area, from schema example)
 BASE_LAT = 12.920364
@@ -52,6 +53,7 @@ def make_telemetry():
 
     return {
         "type": "telemetry",
+        "schema_version": SCHEMA_VERSION,
         "ts": now_ms,
         "vehicle": {
             "rpm":                rpm_profile,
