@@ -1,4 +1,5 @@
 // Global Data Pipeline References
+const EXPECTED_SCHEMA_VERSION = "1.0.0";
 let socketInstance = null;
 let mapInstance = null;
 let markerInstance = null;
@@ -258,6 +259,12 @@ function processIncomingMessage(rawPayloadString) {
     } catch (jsonParseError) {
         console.error("[BRANCH ERROR] Malformed serial buffer string packet bypass encountered.", jsonParseError);
         return;
+    }
+
+    if (dataPacket.schema_version !== EXPECTED_SCHEMA_VERSION) {
+        const receivedVer = dataPacket.schema_version || 'none (unstamped)';
+        logTerminal.innerHTML += `<div class="text-amber-400 font-mono">[WARN] ⚠ SCHEMA MISMATCH: received ${receivedVer}, dashboard expects ${EXPECTED_SCHEMA_VERSION} — data may render incorrectly. Update the dashboard.</div>`;
+        logTerminal.scrollTop = logTerminal.scrollHeight;
     }
 
     if (dataPacket.type !== 'telemetry') {
@@ -594,6 +601,7 @@ function transmitDriverCommand() {
     if (socketInstance && socketInstance.readyState === WebSocket.OPEN && textInputField.value.trim() !== "") {
         const standardizedCommandPacket = {
                 type: "command",
+                schema_version: EXPECTED_SCHEMA_VERSION,
                 action: "msg_driver",
                 payload: textInputField.value
             };

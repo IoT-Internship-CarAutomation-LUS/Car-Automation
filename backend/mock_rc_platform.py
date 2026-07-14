@@ -24,6 +24,7 @@ import random
 import websockets
 
 BACKEND_WS_URL = "ws://localhost:8000/ws"
+SCHEMA_VERSION = "1.0.0"
 TICK_RATE = 0.2          # seconds between status messages (5/sec)
 TARGET_DISTANCE_M = 100.0
 
@@ -128,6 +129,7 @@ def build_status() -> dict:
 
     return {
         "type":              "platform_status",
+        "schema_version":    SCHEMA_VERSION,
         "ts":                int(time.time() * 1000),
         "drive_state":       state["drive_state"],
         "avoidance_state":   avoidance_state,

@@ -24,3 +24,6 @@ node_modules/
 
 # Personal / accidental files
 timetable.html
+
+# Test-session data (not committed going forward)
+backend/obd_session.csv
