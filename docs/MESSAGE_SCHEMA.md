@@ -26,6 +26,14 @@ There are two links, and they use two different formats. Do not mix them up.
 
 ---
 
+## Schema Version
+
+Current version is `1.0.0`. Every message carries a `"schema_version"` field (e.g. `"schema_version": "1.0.0"`) right next to `"type"` and `"ts"`.
+
+**Rule:** Any change to this schema bumps this version number (using MAJOR.MINOR.PATCH format) and gets logged in the change-log table below. No schema change ships without updating this number!
+
+---
+
 ## 1. Message envelope
 
 Every WebSocket message is a JSON object with a `type` field. The receiver switches on `type`.
@@ -47,6 +55,7 @@ Sent roughly once per second. All fields optional-safe: if a value is unavailabl
 ```json
 {
   "type": "telemetry",
+  "schema_version": "1.0.0",
   "ts": 1719750000000,
   "vehicle": {
     "rpm": 2450,
@@ -54,6 +63,7 @@ Sent roughly once per second. All fields optional-safe: if a value is unavailabl
     "gear": 4,
     "clutch_pct": 0,
     "brake": false,
+    "brake_pct": 0,
     "throttle_pct": 28,
     "engine_load_pct": 41,
     "fuel_level_pct": 73,
@@ -90,6 +100,7 @@ Sent roughly once per second. All fields optional-safe: if a value is unavailabl
 | `vehicle.gear` | 0–8, `0`=neutral | may be derived on manual cars |
 | `vehicle.clutch_pct` | 0–100 % | 0 = released, 100 = pressed |
 | `vehicle.brake` | `true`/`false` | brake pedal pressed |
+| `vehicle.brake_pct` | 0–100 % | brake pedal pressure percentage (0 when not braking) |
 | `vehicle.throttle_pct` | 0–100 % | OBD PID 0x11 |
 | `vehicle.engine_load_pct` | 0–100 % | OBD PID 0x04 |
 | `vehicle.fuel_level_pct` | 0–100 % | OBD PID 0x2F |
@@ -116,6 +127,7 @@ Sent ~5 times per second (the control loop is fast). This is the feedback that d
 ```json
 {
   "type": "platform_status",
+  "schema_version": "1.0.0",
   "ts": 1719750000000,
   "drive_state": "FORWARD",
   "avoidance_state": "CLEAR",
@@ -150,23 +162,23 @@ Sent ~5 times per second (the control loop is fast). This is the feedback that d
 Sent when the user presses a button or moves the slider. Keep it tiny.
 
 ```json
-{ "type": "command", "action": "forward", "target_speed_kmh": 5.0 }
+{ "type": "command", "schema_version": "1.0.0", "action": "forward", "target_speed_kmh": 5.0 }
 ```
 
 ```json
-{ "type": "command", "action": "set_speed", "target_speed_kmh": 3.0 }
+{ "type": "command", "schema_version": "1.0.0", "action": "set_speed", "target_speed_kmh": 3.0 }
 ```
 
 ```json
-{ "type": "command", "action": "stop" }
+{ "type": "command", "schema_version": "1.0.0", "action": "stop" }
 ```
 
 ```json
-{ "type": "command", "action": "brake" }
+{ "type": "command", "schema_version": "1.0.0", "action": "brake" }
 ```
 
 ```json
-{ "type": "command", "action": "estop" }
+{ "type": "command", "schema_version": "1.0.0", "action": "estop" }
 ```
 
 ### Actions
@@ -241,6 +253,7 @@ Any change to this schema goes through the team lead and gets a line here so nob
 
 | Date | Change | By |
 |------|--------|-----|
+| 2026-07-06 | v1.0.0 — formalized schema_version field across all message types; added brake_pct to telemetry.vehicle | Shaahir (team lead) |
 | (today) | v1 — initial schema: telemetry, platform_status, command | team lead |
 
 ---
@@ -251,6 +264,5 @@ The following fields/actions are already used in shipped code but are **not yet 
 
 | Item | Type | Used in | Notes |
 |------|------|---------|-------|
-| `brake_pct` | `telemetry.vehicle` field | `backend/mock_telemetry.py`, `dashboard-telemetry/index.html` | Only boolean `brake` is defined above (§2). Dashboard 1 renders a `brake_pct` bar labelled "Digital until hardware sends brake_pct"; the mock sender fabricates a value client-side. |
 | `msg_driver` | `command` action | `dashboard-telemetry/a.js` | Not in the §4 action table. Sent from Dashboard 1's outbound message console; no consumer currently handles it. |
 | `left`, `right`, `backward`, `start` | `command` actions | `dashboard-control/control-console.js`, `dashboard-control/index.html` | Not in the §4 action table. Wired to Dashboard 2's D-pad/start button; flagged in-code as "pending addition to MESSAGE_SCHEMA.md." No firmware/mock currently handles any of the four. |
