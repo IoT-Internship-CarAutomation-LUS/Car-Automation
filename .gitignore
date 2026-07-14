@@ -6,3 +6,4 @@ backend/__pycache__/websocket_handler.cpython-310.pyc
 timetable.html
 backend/telemetry.db
 backend/telemetry.db
+backend/obd_session.csv

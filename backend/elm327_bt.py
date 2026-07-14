@@ -29,7 +29,7 @@ import serial.tools.list_ports
 from obd_decoder import decode_pid, pack_packet, unpack_packet
 
 # ── Configuration ──────────────────────────────────────────────────────────────
-COM_PORT        = "COM7"                     # Outgoing COM port (from Windows Bluetooth Settings)
+COM_PORT        = "COM15"                     # Outgoing COM port (from Windows Bluetooth Settings)
 BAUD_RATE       = 38400                      # Try 9600 if responses are garbled
 READ_TIMEOUT    = 2.0                        # seconds to wait per PID response (Change 5)
 POLL_INTERVAL   = 1.0                        # seconds between full polling cycles
@@ -342,6 +342,7 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
 
                     # Pack/Unpack roundtrip verification per standard
                     raw_bytes   = pack_packet(decoded, GPS_PLACEHOLDER)
+                    print(f"[PACKET] {raw_bytes.hex(' ').upper()}")   # <-- add this
                     vehicle_gps = unpack_packet(raw_bytes)
 
                     # Write and flush to CSV (durable - always runs regardless of network)
