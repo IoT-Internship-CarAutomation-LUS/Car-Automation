@@ -27,3 +27,5 @@ timetable.html
 
 # Test-session data (not committed going forward)
 backend/obd_session.csv
+.vscode/settings.json
+/logs
