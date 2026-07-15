@@ -13,3 +13,4 @@ backend/telemetry.db
 # Local
 timetable.html
 .env
+.vscode/settings.json
