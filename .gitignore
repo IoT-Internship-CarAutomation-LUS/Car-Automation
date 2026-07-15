@@ -1,29 +1,15 @@
-# Databases
-*.db
-
 # Python
-*.pyc
 __pycache__/
-venv/
+*.py[cod]
 .venv/
-*.egg-info/
-build/
-dist/
+venv/
 
-# Environment / secrets
-.env
+# Data — never commit car sessions
+logs/
+*.csv
+*.db
+backend/telemetry.db
 
-# Node
-node_modules/
-
-# OS
-.DS_Store
-
-# Logs
-*.log
-
-# Personal / accidental files
+# Local
 timetable.html
-
-# Test-session data (not committed going forward)
-backend/obd_session.csv
+.env

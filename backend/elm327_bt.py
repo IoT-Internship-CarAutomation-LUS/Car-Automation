@@ -1,7 +1,7 @@
 # elm327_bt.py -- LUS Car Automation
 # Connects to a Bluetooth ELM327 OBD-II adapter over a Windows virtual
-# COM port, polls all 8 target PIDs once per second, decodes them using
-# obd_decoder.py, and logs them to a durable CSV session file.
+# COM port, polls all 11 target PIDs once per second, decodes them using
+# obd_decoder.py, and logs them via session_logger.py.
 #
 # ── First-time setup ────────────────────────────────────────────────────────
 # 1. Pair the ELM327 in Windows Bluetooth settings (PIN is usually 1234 or 0000)
@@ -10,23 +10,26 @@
 # 4. If responses are garbled, try BAUD_RATE = 9600
 #
 # Run modes:
+#   python elm327_bt.py --scan          : Probe every COM port for the ELM327 and report hits
 #   python elm327_bt.py --test          : Prove adapter is alive, list COM ports, and quit
-#   python elm327_bt.py                 : Synchronous capture session, logs to CSV
+#   python elm327_bt.py                 : Synchronous capture session, logs to logs/
 #   python elm327_bt.py --raw           : Print raw hex responses alongside decoded values
 #   python elm327_bt.py --fast          : Faster polling ("01 0C 1" frame count suffix)
 #   python elm327_bt.py --raw --fast    : Combine modifiers
+#   python elm327_bt.py --stream        : Also forward telemetry to the backend over WebSocket
 #
 # Requires: pip install pyserial
 
-import csv
 import json
-import os
 import sys
+import threading
 import time
+from pathlib import Path
 import serial
 import serial.tools.list_ports
 
-from obd_decoder import decode_pid, pack_packet, unpack_packet
+from obd_decoder import decode_pid, decode_atrv, pack_packet, unpack_packet, TARGET_PIDS
+from session_logger import SessionLogger
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 COM_PORT        = "COM15"                     # Outgoing COM port (from Windows Bluetooth Settings)
@@ -34,29 +37,19 @@ BAUD_RATE       = 38400                      # Try 9600 if responses are garbled
 READ_TIMEOUT    = 2.0                        # seconds to wait per PID response (Change 5)
 POLL_INTERVAL   = 1.0                        # seconds between full polling cycles
 BACKEND_WS_URL  = "wss://api.nalusa.space/ws" # WebSocket streaming URL (Change 8)
-CSV_LOG_PATH    = "obd_session.csv"          # local backup file, created in cwd
-SCHEMA_VERSION  = "1.0.0"
+# Anchored to <repo root>/logs -- a relative "logs" resolves against the
+# CWD, not the script, so running from the repo root vs. from backend/
+# would silently split one car session's data across two directories.
+LOG_DIR         = str(Path(__file__).resolve().parent.parent / "logs")
+SCHEMA_VERSION  = "2.0.0"
 
-# GPS placeholder -- replace with real GPS module values when available
-GPS_PLACEHOLDER = {
-    "lat":       0.0,
-    "lng":       0.0,
-    "speed_kmh": 0,
-    "sats":      0,
-}
-
-# Target PIDs to poll each cycle (all 8 from Brief 4 / MESSAGE_SCHEMA.md)
-TARGET_PIDS = [0x0C, 0x0D, 0x05, 0x04, 0x11, 0x2F, 0x10, 0x0F]
-
+# Target PIDs to poll each cycle -- imported from obd_decoder.py, the source
+# of truth for the wire format. Eleven PIDs now, up from eight.
 PID_NAMES = {
-    0x0C: "rpm",
-    0x0D: "speed_kmh",
-    0x05: "coolant_c",
-    0x04: "engine_load_pct",
-    0x11: "throttle_pct",
-    0x2F: "fuel_level_pct",
-    0x10: "maf_gps",
-    0x0F: "intake_temp_c",
+    0x0C: "rpm", 0x0D: "speed_kmh", 0x05: "coolant_c",
+    0x04: "engine_load_pct", 0x11: "throttle_pct",
+    0x2F: "fuel_level_pct", 0x10: "maf_gps", 0x0F: "intake_temp_c",
+    0x46: "ambient_temp_c", 0x0B: "map_kpa", 0x01: "mil_dtc",
 }
 
 # AT commands to send on connect.
@@ -70,9 +63,20 @@ AT_INIT_SEQUENCE = [
 
 # ── Serial helpers ─────────────────────────────────────────────────────────────
 
-def open_port() -> serial.Serial:
-    """Open the Bluetooth COM port. Blocks until successful."""
+def open_port(max_attempts: int = None) -> "serial.Serial | None":
+    """
+    Open the Bluetooth COM port.
+
+    max_attempts=None (default): retry forever. Correct for run_capture --
+    the car may not be powered on yet, so there is no "give up" point.
+
+    max_attempts=N: give up and return None after N failed attempts.
+    Used by run_test_mode, which is a diagnostic and should give an answer
+    instead of sitting in an infinite retry loop under a dashboard.
+    """
+    attempt = 0
     while True:
+        attempt += 1
         try:
             ser = serial.Serial(
                 COM_PORT,
@@ -84,6 +88,8 @@ def open_port() -> serial.Serial:
             return ser
         except serial.SerialException as e:
             print(f"[BT] Cannot open {COM_PORT}: {e}")
+            if max_attempts is not None and attempt >= max_attempts:
+                return None
             print(f"[BT] Retrying in 3s... (check Bluetooth pairing and Device Manager)")
             time.sleep(3)
 
@@ -201,34 +207,79 @@ def query_pid(ser: serial.Serial, pid: int, fast: bool = False, is_first: bool =
     return response
 
 
-# ── CSV logging (Durable -- Change 3) ──────────────────────────────────────────
+# ── Mode 0: Port Scan ──────────────────────────────────────────────────────────
 
-def init_csv(path: str):
-    """Open session CSV with line buffering and flush after headers."""
-    file_exists = os.path.exists(path)
-    # Change 3: buffering=1 ensures line-buffered output in text mode
-    f = open(path, "a", newline="", buffering=1)
-    fieldnames = [
-        "ts_ms", "rpm", "speed_kmh", "coolant_c", "engine_load_pct",
-        "throttle_pct", "fuel_level_pct", "maf_gps", "intake_temp_c",
-    ]
-    writer = csv.DictWriter(f, fieldnames=fieldnames)
-    if not file_exists:
-        writer.writeheader()
-        f.flush()
-        print(f"[CSV] Created session log: {path}")
+def run_scan():
+    """
+    Walk every available COM port and find the one the ELM327 answers on.
+    This machine has twelve identical "Standard Serial over Bluetooth link"
+    ports -- there is no way to tell them apart except by asking each one.
+    Does not stop at the first hit: a stale pairing can still answer ATZ.
+    """
+    print("=" * 55)
+    print("  ELM327 Bluetooth -- PORT SCAN (--scan)")
+    print("=" * 55)
+
+    log = SessionLogger(LOG_DIR)
+    print(f"[LOG] Session logs -> {LOG_DIR}")
+    print(f"[LOG] Scan session {log.session_id}")
+
+    ports = list(serial.tools.list_ports.comports())
+    if not ports:
+        print("[SCAN] No COM ports found on this machine.")
+        log.close()
+        return
+
+    print(f"[SCAN] {len(ports)} COM port(s) found. Probing each with ATZ...\n")
+    hits = []
+
+    for p in ports:
+        print(f"[SCAN] {p.device} ({p.description}) ... ", end="", flush=True)
+
+        try:
+            ser = serial.Serial(p.device, baudrate=BAUD_RATE, timeout=1.5, write_timeout=1.5)
+        except Exception as e:
+            print(f"open failed ({e})")
+            log.log_test("scan", "ATZ", str(e), "open_failed")
+            continue
+
+        try:
+            ser.reset_input_buffer()
+            ser.write(b"ATZ\r")
+            resp = read_until_prompt(ser, timeout=2.0)
+        except Exception as e:
+            print(f"probe failed ({e})")
+            log.log_test("scan", "ATZ", str(e), "open_failed")
+            resp = None
+        finally:
+            try:
+                ser.close()
+            except Exception:
+                pass
+
+        if resp is None:
+            continue
+
+        if "ELM" in resp.upper() or "OK" in resp.upper():
+            print(f"HIT -> {resp!r}")
+            hits.append((p.device, resp))
+            log.log_test("scan", "ATZ", resp, "hit")
+        else:
+            print(f"no response ({resp!r})")
+            log.log_test("scan", "ATZ", resp or "-", "no_response")
+
+    print("\n" + "-" * 55)
+    if hits:
+        print(f"[SCAN] {len(hits)} hit(s) found:")
+        for device, resp in hits:
+            print(f"  {device} -> {resp!r}")
+        print(f"[SCAN] Set COM_PORT = \"{hits[0][0]}\" in elm327_bt.py"
+              + (" (or try each hit if more than one)." if len(hits) > 1 else "."))
     else:
-        print(f"[CSV] Appending to existing session log: {path}")
-    return f, writer
+        print("[SCAN] No hits. Is the ELM327 powered (12V from the car's OBD port) and paired?")
+    print("-" * 55)
 
-
-def log_csv(f, writer: csv.DictWriter, ts_ms: int, decoded: dict):
-    """Write one decoded polling cycle and immediately flush to disk (Change 3)."""
-    row = {"ts_ms": ts_ms}
-    for pid, name in PID_NAMES.items():
-        row[name] = decoded.get(pid)
-    writer.writerow(row)
-    f.flush()   # Change 3: flush after every row so data survives hard kill/power loss
+    log.close()
 
 
 # ── Mode 1: Test Mode (Change 7) ───────────────────────────────────────────────
@@ -238,41 +289,58 @@ def run_test_mode():
     print("=" * 55)
     print("  ELM327 Bluetooth -- TEST MODE (--test)")
     print("=" * 55)
-    
+
+    log = SessionLogger(LOG_DIR)
+    print(f"[LOG] Session logs -> {LOG_DIR}")
+    print(f"[LOG] Test session {log.session_id}")
+
     ports = list(serial.tools.list_ports.comports())
+    port_list = "; ".join(f"{p.device}: {p.description}" for p in ports) or "none found"
     print("[BT] Available COM Ports on system:")
     if not ports:
         print("     None found!")
     for p in ports:
         print(f"     {p.device}: {p.description}")
+    log.log_test("list_ports", "-", port_list, "info")
     print("-" * 55)
-    
+
     print(f"[BT] Opening configured port ({COM_PORT})...")
-    ser = open_port()
+    ser = open_port(max_attempts=3)
+    if ser is None:
+        print(f"[BT] Could not open {COM_PORT} after 3 attempts.")
+        print("[BT] The adapter is dead until it gets 12V from the car's OBD port — this is expected at a desk.")
+        print("[BT] If the adapter IS powered and this still fails, the port is probably wrong.")
+        print(f"[BT] There are {len(ports)} Bluetooth COM ports on this machine. Run: python elm327_bt.py --scan")
+        log.log_test("open_port", COM_PORT, "-", "open_failed")
+        log.close()
+        return
+
     try:
         ok = initialise_elm327(ser)
+        log.log_test("at_init", "ATZ/ATE0/ATL0/ATSP0/ATH0", "-", "pass" if ok else "fail")
         if not ok:
             print("[BT] Test failed during AT initialization.")
             return
 
-        print("\n[BT] Sending test query 0100 (Supported PIDs)...")
-        try:
+        for step, cmd, timeout in [
+            ("supported_pids", b"01 00\r", 5.0),
+            ("rpm",            b"01 0C\r", 2.0),
+            ("battery",        b"ATRV\r",  2.0),
+        ]:
             ser.reset_input_buffer()
-            ser.write(b"01 00\r")
-            resp_00 = read_until_prompt(ser, timeout=5.0)
-            print(f"     Raw reply for 0100 -> {resp_00!r}")
+            ser.write(cmd)
+            resp = read_until_prompt(ser, timeout=timeout)
+            print(f"     {cmd.decode().strip()} -> {resp!r}")
+            log.log_test(step, cmd.decode().strip(), resp,
+                         "pass" if resp else "no_response")
 
-            print("\n[BT] Sending test query 010C (RPM)...")
-            ser.reset_input_buffer()
-            ser.write(b"01 0C\r")
-            resp_0c = read_until_prompt(ser, timeout=2.0)
-            print(f"     Raw reply for 010C -> {resp_0c!r}")
-            print("\n[BT] Test check complete. Adapter is alive and responsive.")
-        except (serial.SerialTimeoutException, serial.SerialException) as e:
-            print(f"\n[BT] ERROR during test write ({e}).")
-            print("     Ensure the ELM327 is plugged into a 12V OBD port / car and paired.")
+        print("\n[BT] Test check complete. Adapter is alive and responsive.")
+    except (serial.SerialTimeoutException, serial.SerialException) as e:
+        print(f"\n[BT] ERROR during test write ({e}).")
+        print("     Ensure the ELM327 is plugged into a 12V OBD port / car and paired.")
     finally:
         ser.close()
+        log.close()
         print("[BT] Port closed cleanly.")
 
 
@@ -280,9 +348,11 @@ def run_test_mode():
 
 def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bool = False):
     """Synchronous capture loop decoupled from network dependency."""
-    f_csv, csv_writer = init_csv(CSV_LOG_PATH)
-    
-    # Change 8: Only import websockets and set up client if --stream flag passed
+    log = SessionLogger(LOG_DIR)
+    print(f"[LOG] Session logs -> {LOG_DIR}")
+    print(f"[LOG] Session {log.session_id} started.")
+
+    seq = 0
     ws_client = None
     ws_connect = None
     if stream_mode:
@@ -290,8 +360,31 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
             from websockets.sync.client import connect as ws_connect
             print(f"[WS] --stream enabled. Will stream best-effort to {BACKEND_WS_URL}")
         except ImportError:
-            print("[WS] ERROR: 'websockets' package not installed (`pip install websockets`). Running CSV only.")
+            print("[WS] ERROR: 'websockets' package not installed (`pip install websockets`). Running offline.")
+            log.log_stream("import_failed", "websockets package missing")
             stream_mode = False
+
+    def drain_incoming():
+        """
+        The backend echoes every message back to the sender. Nothing here
+        ever reads those echoes, so without draining, the socket receive
+        buffer fills and the capture loop freezes mid-session -- roughly
+        the length of a car test. Runs for the life of the process; a
+        recv error must never kill the capture, only pause this thread briefly.
+        """
+        while True:
+            if ws_client is None:
+                time.sleep(0.5)
+                continue
+            try:
+                ws_client.recv(timeout=0.5)
+            except TimeoutError:
+                continue
+            except Exception:
+                time.sleep(0.5)
+
+    if stream_mode:
+        threading.Thread(target=drain_incoming, daemon=True).start()
 
     try:
         while True:
@@ -302,6 +395,16 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
                 ser.close()
                 time.sleep(5)
                 continue
+
+            # Change 8 (B2c): probe the car's own statement of supported PIDs.
+            # Required deliverable -- captured but never gates polling.
+            ser.reset_input_buffer()
+            ser.write(b"0100\r")
+            resp_0100 = read_until_prompt(ser, timeout=5.0)
+            print("[OBD] ===== SUPPORTED PIDS (0100) =====")
+            print(f"[OBD] {resp_0100!r}")
+            print("[OBD] ==================================")
+            log.log_stream("supported_pids", resp_0100)
 
             print(f"[OBD] Starting synchronous capture loop (1 cycle per {POLL_INTERVAL}s)...")
             if raw_mode:
@@ -321,15 +424,21 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
                     for i, pid in enumerate(TARGET_PIDS):
                         # Give 5s grace only on the very first PID request of a fresh session
                         is_first = (first_cycle and i == 0)
+                        request = f"01{pid:02X}"
                         raw_hex = query_pid(ser, pid, fast=fast_mode, is_first=is_first)
-                        
-                        # Change 9: --raw demo view
+                        value = decode_pid(raw_hex)
+                        decoded[pid] = value
+
                         if raw_mode:
-                            print(f"[RAW] 01{pid:02X} -> {raw_hex}")
-                        
-                        decoded[pid] = decode_pid(raw_hex)
+                            print(f"[RAW] {request} -> {raw_hex}")
+                            log.log_raw(pid, request, raw_hex, value)
 
                     first_cycle = False
+
+                    # Real battery reading via ATRV -- works even with no ECU present.
+                    ser.reset_input_buffer()
+                    ser.write(b"ATRV\r")
+                    battery_v = decode_atrv(read_until_prompt(ser, timeout=2.0))
 
                     # Print live terminal readout
                     print(
@@ -337,16 +446,31 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
                         f"spd={decoded.get(0x0D)}km/h "
                         f"cool={decoded.get(0x05)}C "
                         f"fuel={decoded.get(0x2F)}% "
-                        f"maf={decoded.get(0x10)}"
+                        f"maf={decoded.get(0x10)} "
+                        f"batt={battery_v}V"
                     )
 
-                    # Pack/Unpack roundtrip verification per standard
-                    raw_bytes   = pack_packet(decoded, GPS_PLACEHOLDER)
-                    print(f"[PACKET] {raw_bytes.hex(' ').upper()}")   # <-- add this
-                    vehicle_gps = unpack_packet(raw_bytes)
+                    seq = (seq + 1) & 0xFF
+                    gps = {"lat": None, "lng": None, "sats": 0, "fix": False}   # until GPS is wired
+                    extras = {
+                        "battery_v": battery_v,
+                        "gear": None,
+                        "seq": seq,
+                        "can": {"brake": None, "clutch": None, "ac": None},   # not found yet
+                        "health": {"power_ok": True, "gps_ok": gps["fix"], "can_ok": False},
+                    }
 
-                    # Write and flush to CSV (durable - always runs regardless of network)
-                    log_csv(f_csv, csv_writer, ts_ms, decoded)
+                    # Pack/unpack roundtrip verification per standard --
+                    # validates the CRC against real car data before the ESP32 stage needs it.
+                    raw_bytes  = pack_packet(decoded, gps, extras)
+                    packet_hex = raw_bytes.hex(' ').upper()
+                    unpacked   = unpack_packet(raw_bytes)
+                    if not unpacked["crc_valid"]:
+                        print("[PACKET] WARNING: round-trip CRC check failed!")
+                    print(f"[PACKET] {packet_hex}")
+
+                    # Durable log -- always runs regardless of network
+                    log.log_decoded(decoded, PID_NAMES, packet_hex=packet_hex)
 
                     # Change 8: Best-effort WebSocket streaming (decoupled from serial capture)
                     if stream_mode and ws_connect is not None:
@@ -354,26 +478,34 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
                             "type":           "telemetry",
                             "schema_version": SCHEMA_VERSION,
                             "ts":             ts_ms,
-                            "vehicle":        vehicle_gps["vehicle"],
+                            "vehicle":        unpacked["vehicle"],
                             "tyres": {
-                                "fl": None, "fr": None, "rl": None, "rr": None,
+                                "fl": {"pressure_kpa": None, "temp_c": None},
+                                "fr": {"pressure_kpa": None, "temp_c": None},
+                                "rl": {"pressure_kpa": None, "temp_c": None},
+                                "rr": {"pressure_kpa": None, "temp_c": None},
                             },
-                            "gps":            vehicle_gps["gps"],
+                            "gps":            unpacked["gps"],
+                            "device":         unpacked["device"],
                         }
                         # Reconnect if socket is closed or not yet opened
                         if ws_client is None:
                             try:
                                 ws_client = ws_connect(BACKEND_WS_URL, open_timeout=1.5, close_timeout=1.0)
                                 print(f"[WS] Connected to {BACKEND_WS_URL}")
+                                log.log_stream("connected", BACKEND_WS_URL)
                             except Exception as e:
-                                print(f"[WS] Connect warning ({e}) -- continuing offline CSV capture.")
+                                print(f"[WS] Connect warning ({e}) -- continuing offline capture.")
+                                log.log_stream("connect_failed", str(e))
                                 ws_client = None
 
                         if ws_client is not None:
                             try:
                                 ws_client.send(json.dumps(telemetry_packet))
+                                log.log_stream("sent", f"rpm={decoded.get(0x0C)}")
                             except Exception as e:
-                                print(f"[WS] Send failed ({e}) -- connection dropped. Continuing CSV capture.")
+                                print(f"[WS] Send failed ({e}) -- connection dropped. Continuing capture.")
+                                log.log_stream("send_failed", str(e))
                                 try:
                                     ws_client.close()
                                 except Exception:
@@ -393,34 +525,34 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
                     pass
                 time.sleep(3)
     finally:
-        # Change 3: Close CSV cleanly on exit or Ctrl+C
-        try:
-            f_csv.close()
-            print("\n[CSV] Session log closed cleanly.")
-        except Exception:
-            pass
-        # Change 8: Close WebSocket cleanly on exit
+        # Close WebSocket cleanly on exit (log the close event before log.close(),
+        # or the write would reopen the file)
         if stream_mode and ws_client is not None:
             try:
                 ws_client.close()
+                log.log_stream("closed", "clean shutdown")
                 print("[WS] WebSocket connection closed.")
             except Exception:
                 pass
+        log.close()
 
 
 if __name__ == "__main__":
+    scan_mode   = "--scan" in sys.argv
     test_mode   = "--test" in sys.argv
     raw_mode    = "--raw" in sys.argv
     fast_mode   = "--fast" in sys.argv
     stream_mode = "--stream" in sys.argv
 
-    if test_mode:
+    if scan_mode:
+        run_scan()
+    elif test_mode:
         run_test_mode()
     else:
         print("=" * 55)
         print("  ELM327 Bluetooth OBD-II Acquisition Script")
         print(f"  COM Port : {COM_PORT}  |  Baud: {BAUD_RATE}")
-        print(f"  CSV Log  : {CSV_LOG_PATH}")
+        print(f"  Log Dir  : {LOG_DIR}")
         print(f"  Backend  : {BACKEND_WS_URL if stream_mode else 'DISABLED (offline mode)'}")
         print(f"  Modes    : stream={stream_mode}, raw={raw_mode}, fast={fast_mode}")
         print("=" * 55)

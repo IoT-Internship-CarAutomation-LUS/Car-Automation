@@ -3,13 +3,11 @@
 # One /ws endpoint for everyone: hardware, dashboards, mock senders.
 #
 # Message routing:
-#   telemetry       → save to DB + fan-out to all clients
-#   platform_status → save to DB + fan-out to all clients
-#   command         → fan-out to all clients (reaches hardware/platform)
+#   telemetry → save to DB + fan-out to all other clients
 
 import json
 from fastapi import WebSocket, WebSocketDisconnect
-from database import save_telemetry, save_platform_status
+from database import save_telemetry
 import config
 
 # Set of all currently connected WebSocket clients
@@ -46,15 +44,6 @@ async def websocket_endpoint(websocket: WebSocket):
                 save_telemetry(ts, message)
                 await fan_out(raw, sender=websocket)
 
-            elif msg_type == "platform_status":
-                save_platform_status(ts, message)
-                await fan_out(raw, sender=websocket)
-
-            elif msg_type == "command":
-                # Don't store commands — just relay them
-                print(f"[WS] Command received: {message.get('action')}")
-                await fan_out(raw, sender=websocket)
-
             else:
                 print(f"[WS] Unknown message type: '{msg_type}' — ignoring.")
 
@@ -64,10 +53,12 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 async def fan_out(raw_message: str, sender: WebSocket):
-    """Send a message to every connected client, including the sender."""
+    """Send a message to every connected client except the sender."""
     dead_clients = set()
 
     for client in connected_clients:
+        if client is sender:
+            continue
         try:
             await client.send_text(raw_message)
         except Exception:

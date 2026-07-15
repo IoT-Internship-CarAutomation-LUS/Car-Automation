@@ -1,5 +1,5 @@
 // Global Data Pipeline References
-const EXPECTED_SCHEMA_VERSION = "1.0.0";
+const EXPECTED_SCHEMA_VERSION = "2.0.0";
 let socketInstance = null;
 let mapInstance = null;
 let markerInstance = null;
@@ -238,9 +238,8 @@ function connectHardwareStream() {
 // ==========================================
 // SUB-BRANCH: MESSAGE ENVELOPE ROUTER
 // Per MESSAGE_SCHEMA.md section 1: every WebSocket message is JSON with
-// a `type` field. This dashboard (Telemetry / Dashboard 1) only acts on
-// `type: "telemetry"`. Other envelope types (platform_status, command)
-// belong to the Control Console and are logged but otherwise ignored here.
+// a `type` field. This dashboard only acts on `type: "telemetry"` — that
+// is currently the only message type the schema defines.
 // ==========================================
 function processIncomingMessage(rawPayloadString) {
     const logTerminal = document.getElementById('serial-terminal');
@@ -268,8 +267,7 @@ function processIncomingMessage(rawPayloadString) {
     }
 
     if (dataPacket.type !== 'telemetry') {
-        // Not our envelope type (e.g. platform_status / command belong to
-        // the Control Console dashboard) — nothing to render here.
+        // Not our envelope type — nothing to render here.
         return;
     }
 
@@ -279,19 +277,22 @@ function processIncomingMessage(rawPayloadString) {
 // ==========================================
 // SUB-BRANCH: TELEMETRY METRIC PARSING ENGINE
 // EXPECTS the `telemetry` envelope exactly as defined in
-// MESSAGE_SCHEMA.md section 2:
+// MESSAGE_SCHEMA.md section 2 (schema v2.0.0):
 // {
 //   "type": "telemetry", "ts": <ms epoch>,
-//   "vehicle": { rpm, speed_kmh, gear, clutch_pct, brake, throttle_pct,
+//   "vehicle": { rpm, speed_kmh, gear, clutch, brake, throttle_pct,
 //                engine_load_pct, fuel_level_pct, fuel_mileage_kmpl,
-//                coolant_c, intake_temp_c, maf_gps, ac_on, dtc_count,
-//                battery_mv },
+//                coolant_c, intake_temp_c, ambient_temp_c, map_kpa,
+//                maf_gps, ac_on, mil_on, dtc_count, battery_v },
 //   "tyres": { fl|fr|rl|rr: { pressure_kpa, temp_c } },
-//   "gps": { lat, lng, speed_kmh, sats, fix }
+//   "gps": { lat, lng, sats, fix },
+//   "device": { power_ok, gps_ok, can_ok, seq }
 // }
 // All fields are "optional-safe": a missing sub-object means no data for
 // that panel this tick; a field present but `null` means the sensor has
-// no reading right now (still counts as "fresh", just shows "--").
+// no reading right now (still counts as "fresh", just shows "--"). For
+// clutch/brake/ac_on specifically, `null` means "not found on the CAN bus
+// yet" — it must never render as if the state were known to be off.
 // ==========================================
 function applyTelemetryPacket(dataPacket) {
     const packetTs = dataPacket.ts || Date.now();
@@ -391,10 +392,19 @@ function applyVehicleData(vehicle) {
             fuelBadge.className = 'px-2.5 py-1 text-[10px] font-bold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
         }
     }
-    if (vehicle.clutch_pct !== undefined) {
-        const clutchVal = vehicle.clutch_pct === null ? 0 : vehicle.clutch_pct;
-        document.getElementById('txt-clutch').innerText = vehicle.clutch_pct === null ? '--%' : `${clutchVal}%`;
-        document.getElementById('bar-clutch').style.width = `${clutchVal}%`;
+    if (vehicle.clutch !== undefined) {
+        const txtClutch = document.getElementById('txt-clutch');
+        if (vehicle.clutch === true) {
+            txtClutch.innerText = 'PRESSED';
+            txtClutch.className = 'text-sm font-mono font-semibold text-amber-400';
+        } else if (vehicle.clutch === false) {
+            txtClutch.innerText = 'RELEASED';
+            txtClutch.className = 'text-sm font-mono font-semibold text-slate-300';
+        } else {
+            // null = not found on the CAN bus yet -- must not read as "released"
+            txtClutch.innerText = '--';
+            txtClutch.className = 'text-sm font-mono font-semibold text-slate-500';
+        }
     }
 
     // 2. Safety brake state transitions
@@ -412,21 +422,6 @@ function applyVehicleData(vehicle) {
             elementBrakeTxt.className = "text-xs font-bold text-slate-500";
         } else {
             elementBrakeTxt.innerText = "--";
-        }
-    }
-
-    // 2b. Analog brake pressure (vehicle.brake_pct), independent of the
-    // boolean brake flag above so both can update on their own cadence.
-    if (vehicle.brake_pct !== undefined) {
-        const barBrake = document.getElementById('bar-brake');
-        const txtBrakePct = document.getElementById('txt-brake-pct');
-
-        if (vehicle.brake_pct === null) {
-            barBrake.style.width = '0%';
-            txtBrakePct.innerText = '--%';
-        } else {
-            barBrake.style.width = `${vehicle.brake_pct}%`;
-            txtBrakePct.innerText = `${vehicle.brake_pct}%`;
         }
     }
 
@@ -460,10 +455,29 @@ function applyVehicleData(vehicle) {
     if (vehicle.maf_gps !== undefined) {
         document.getElementById('txt-maf').innerText = `${fmt(vehicle.maf_gps, 1)} g/s`;
     }
-    if (vehicle.battery_mv !== undefined) {
-        document.getElementById('txt-battery').innerText = (vehicle.battery_mv === null)
+    if (vehicle.battery_v !== undefined) {
+        document.getElementById('txt-battery').innerText = (vehicle.battery_v === null)
             ? '--.- V'
-            : `${(vehicle.battery_mv / 1000).toFixed(1)} V`;
+            : `${Number(vehicle.battery_v).toFixed(1)} V`;
+    }
+    if (vehicle.ambient_temp_c !== undefined) {
+        document.getElementById('txt-ambient').innerHTML = `${fmt(vehicle.ambient_temp_c, 0)} &deg;C`;
+    }
+    if (vehicle.map_kpa !== undefined) {
+        document.getElementById('txt-map').innerText = `${fmt(vehicle.map_kpa, 0)} kPa`;
+    }
+    if (vehicle.mil_on !== undefined) {
+        const badgeMil = document.getElementById('badge-mil');
+        if (vehicle.mil_on === null) {
+            badgeMil.innerText = 'MIL --';
+            badgeMil.className = 'chip chip-neutral';
+        } else if (vehicle.mil_on === true) {
+            badgeMil.innerText = 'MIL ON';
+            badgeMil.className = 'px-2.5 py-1 text-[10px] font-bold rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 animate-pulse';
+        } else {
+            badgeMil.innerText = 'MIL OFF';
+            badgeMil.className = 'chip chip-neutral';
+        }
     }
     if (vehicle.dtc_count !== undefined) {
         const badgeDtc = document.getElementById('badge-dtc');
@@ -594,25 +608,6 @@ function applyGpsData(gps) {
 }
 
 // ==========================================
-// SUB-BRANCH: COMMAND PACKET SIM800L TRANSMITTER LINK
-// ==========================================
-function transmitDriverCommand() {
-    const textInputField = document.getElementById('input-msg');
-    if (socketInstance && socketInstance.readyState === WebSocket.OPEN && textInputField.value.trim() !== "") {
-        const standardizedCommandPacket = {
-                type: "command",
-                schema_version: EXPECTED_SCHEMA_VERSION,
-                action: "msg_driver",
-                payload: textInputField.value
-            };
-        socketInstance.send(JSON.stringify(standardizedCommandPacket));
-        textInputField.value = "";
-    } else {
-        console.warn("[BRANCH WARNING] System data tunnel connection state down. Transmission aborted.");
-    }
-}
-
-// ==========================================
 // SUB-BRANCH: TRIP HISTORY (REST, not WebSocket)
 // Historical data lives in the backend's SQLite store and is pulled over
 // HTTP, separate from the live telemetry stream above. Two independent
@@ -623,7 +618,7 @@ function transmitDriverCommand() {
 //
 // NOTE ON DATA SHAPE: the exact field layout of /api/telemetry/history
 // records wasn't fully specified (only rpm, speed_kmh, coolant_c,
-// battery_mv, and tyre pressures were called out explicitly, plus "etc").
+// battery_v, and tyre pressures were called out explicitly, plus "etc").
 // normalizeHistoryRecord() below tries a flat shape first, then falls
 // back to a nested `vehicle` object matching the live telemetry schema,
 // so this keeps working whichever shape the backend actually returns.
@@ -647,7 +642,7 @@ function normalizeHistoryRecord(record) {
         gear: record.gear ?? vehicle.gear ?? null,
         coolant_c: record.coolant_c ?? vehicle.coolant_c ?? null,
         fuel_level_pct: record.fuel_level_pct ?? vehicle.fuel_level_pct ?? null,
-        battery_mv: record.battery_mv ?? vehicle.battery_mv ?? null
+        battery_v: record.battery_v ?? vehicle.battery_v ?? null
     };
 }
 
