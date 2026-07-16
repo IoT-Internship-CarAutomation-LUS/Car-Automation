@@ -37,30 +37,3 @@ def gps_track(limit: int = 200):
     Feeds Dashboard 1's breadcrumb trail.
     """
     return database.get_gps_track(limit)
-
-
-@router.get("/platform/history")
-def platform_history(limit: int = 200):
-    """Return the last N platform_status records (oldest first). Used for drive replay."""
-    return database.get_platform_history(limit)
-
-
-@router.post("/command")
-async def post_command(request: dict):
-    """
-    Backup command path over HTTP — used if the WebSocket drops.
-    Accepts the same command format as the WebSocket message.
-    Note: this stores the command but does NOT relay it to hardware
-    (hardware must be connected via WebSocket for real-time relay).
-    """
-    valid_actions = {"forward", "set_speed", "stop", "brake", "estop"}
-    action = request.get("action")
-
-    if action not in valid_actions:
-        return JSONResponse(
-            status_code=400,
-            content={"error": f"Unknown action '{action}'. Must be one of: {sorted(valid_actions)}"}
-        )
-
-    print(f"[REST] Command received via HTTP: {action}")
-    return {"status": "received", "action": action}

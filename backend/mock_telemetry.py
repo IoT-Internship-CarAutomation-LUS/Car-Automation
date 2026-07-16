@@ -2,6 +2,12 @@
 # Pretends to be the real car (ESP32 + ELM327 + GPS + TPMS).
 # Sends a telemetry message every 1 second to the backend WebSocket.
 #
+# Matches schema v2.0.0 exactly, including its central point: several
+# fields are frequently `null` because the signal hasn't been found on
+# the CAN bus yet (fuel_level_pct, ac_on, brake, clutch each go null on
+# roughly 1 in 5 messages) — a dashboard that isn't tested against that
+# will look fine here and then break on the real car.
+#
 # Run with:
 #   python mock_telemetry.py
 #
@@ -14,16 +20,24 @@ import random
 import websockets
 
 BACKEND_WS_URL = "ws://localhost:8000/ws"
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "2.0.0"
 
 # Base GPS position (Chennai area, from schema example)
 BASE_LAT = 12.920364
 BASE_LNG = 80.131663
 
+# Roughly 1 in 5 messages: fuel_level_pct / ac_on / brake / clutch go null,
+# simulating "not found on the CAN bus yet" rather than "off".
+UNKNOWN_CHANCE = 0.2
+
+_seq = 0
+
 
 def make_telemetry():
     """Generate a realistic fake telemetry message."""
+    global _seq
     now_ms = int(time.time() * 1000)
+    _seq = (_seq + 1) & 0xFF
 
     # GPS drift large enough (>0.002km/step) to trigger the trip odometer
     lat_drift = random.uniform(-0.0004, 0.0004)
@@ -36,20 +50,37 @@ def make_telemetry():
         weights=[85, 15]
     )[0]
 
-    # Fuel level: mostly OK, occasionally LOW/CRITICAL to test alert badges
-    fuel_profile = random.choices(
-        [random.randint(30, 90),  # OK  (green badge)
-         random.randint(11, 25), # LOW (amber badge)
-         random.randint(1, 10)], # CRITICAL (rose badge, pulsing)
-        weights=[70, 20, 10]
-    )[0]
+    # Fuel level: mostly OK, occasionally LOW/CRITICAL to test alert badges.
+    # Null on ~1 in 5 messages (signal not found yet) -- must render as
+    # "--", never as an empty tank.
+    if random.random() < UNKNOWN_CHANCE:
+        fuel_level_pct = None
+    else:
+        fuel_level_pct = random.choices(
+            [random.randint(30, 90),  # OK  (green badge)
+             random.randint(11, 25), # LOW (amber badge)
+             random.randint(1, 10)], # CRITICAL (rose badge, pulsing)
+            weights=[70, 20, 10]
+        )[0]
 
-    # Brake: boolean for whether pedal is pressed + percentage depth.
-    # brake_pct feeds the new bar-brake progress bar and txt-brake-pct
-    # in the updated HTML ("Digital until hardware sends brake_pct").
-    # Correlated: pct is 0 when not braking, non-zero when braking.
-    brake_active = random.choice([False, False, False, True])
-    brake_pct = random.randint(20, 100) if brake_active else 0
+    # Brake: three-state boolean. None = not found on the CAN bus yet,
+    # must never be shown as "released".
+    if random.random() < UNKNOWN_CHANCE:
+        brake = None
+    else:
+        brake = random.choice([False, False, False, True])
+
+    # Clutch: three-state boolean (no longer a percentage in v2).
+    if random.random() < UNKNOWN_CHANCE:
+        clutch = None
+    else:
+        clutch = random.choice([False, False, False, True])  # mostly released
+
+    # AC: three-state boolean.
+    if random.random() < UNKNOWN_CHANCE:
+        ac_on = None
+    else:
+        ac_on = random.choice([True, False])
 
     return {
         "type": "telemetry",
@@ -59,19 +90,21 @@ def make_telemetry():
             "rpm":                rpm_profile,
             "speed_kmh":          random.randint(0, 80),
             "gear":               random.randint(1, 5),
-            "clutch_pct":         random.choice([0, 0, 0, 50, 100]),  # mostly released
-            "brake":              brake_active,
-            "brake_pct":          brake_pct,
+            "clutch":             clutch,
+            "brake":              brake,
             "throttle_pct":       random.randint(10, 60),
             "engine_load_pct":    random.randint(20, 70),
-            "fuel_level_pct":     fuel_profile,
+            "fuel_level_pct":     fuel_level_pct,
             "fuel_mileage_kmpl":  round(random.uniform(10.0, 20.0), 1),
             "coolant_c":          random.randint(80, 100),
             "intake_temp_c":      random.randint(25, 45),
+            "ambient_temp_c":     random.randint(15, 40),
+            "map_kpa":            random.randint(30, 105),
             "maf_gps":            round(random.uniform(5.0, 20.0), 1),
-            "ac_on":              random.choice([True, False]),
+            "ac_on":              ac_on,
+            "mil_on":             random.random() < 0.03,
             "dtc_count":          0,
-            "battery_mv":         random.randint(13500, 14200)
+            "battery_v":          round(random.uniform(11.8, 14.4), 1)
         },
         "tyres": {
             "fl": {"pressure_kpa": round(random.uniform(210.0, 230.0), 1), "temp_c": round(random.uniform(35.0, 45.0), 1)},
@@ -85,6 +118,12 @@ def make_telemetry():
             "speed_kmh": random.randint(0, 80),
             "sats":      random.randint(5, 10),
             "fix":       True
+        },
+        "device": {
+            "power_ok": True,
+            "gps_ok":   True,
+            "can_ok":   False,
+            "seq":      _seq
         }
     }
 

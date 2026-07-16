@@ -106,31 +106,19 @@
                     <span class="field-label mb-2">Gear</span>
                     <span id="txt-gear" class="gear-readout">-</span>
                 </div>
-                <div class="dash-card p-5 flex flex-col justify-center">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="field-label">Clutch</span>
-                        <span id="txt-clutch" class="text-sm font-mono font-semibold text-slate-300">--%</span>
-                    </div>
-                    <div class="meter">
-                        <div id="bar-clutch" class="meter-fill meter-fill-accent" style="width: 0%"></div>
-                    </div>
+                <div class="dash-card p-5 flex flex-col justify-center items-center text-center">
+                    <span class="field-label mb-2">Clutch</span>
+                    <span id="txt-clutch" class="text-sm font-mono font-semibold text-slate-300">--</span>
                 </div>
             </div>
 
             <div id="card-brake" class="dash-card p-5 transition-colors">
-                <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
                         <i data-lucide="circle-dot" class="w-4 h-4 text-slate-500" id="icon-brake"></i>
                         <span class="field-label">Brake Pedal</span>
                     </div>
                     <span id="txt-brake" class="text-xs font-bold text-slate-500">--</span>
-                </div>
-                <div class="meter mb-1.5">
-                    <div id="bar-brake" class="meter-fill meter-fill-danger" style="width: 0%"></div>
-                </div>
-                <div class="flex items-center justify-between">
-                    <span id="txt-brake-pct" class="text-[10px] font-mono font-semibold text-slate-500">--%</span>
-                    <span class="text-[9px] text-slate-600">Analog pressure &middot; brake_pct</span>
                 </div>
             </div>
 
@@ -140,7 +128,10 @@
                     <span class="field-label flex items-center gap-2">
                         <i data-lucide="activity" class="w-4 h-4 text-emerald-500"></i> Engine Health
                     </span>
-                    <span id="badge-dtc" class="chip chip-neutral">-- DTC</span>
+                    <div class="flex items-center gap-2">
+                        <span id="badge-mil" class="chip chip-neutral">MIL --</span>
+                        <span id="badge-dtc" class="chip chip-neutral">-- DTC</span>
+                    </div>
                 </div>
                 <div class="grid grid-cols-3 gap-4 text-center">
                     <div>
@@ -152,12 +143,20 @@
                         <span id="txt-intake" class="readout">-- &deg;C</span>
                     </div>
                     <div>
+                        <span class="micro-label">Ambient</span>
+                        <span id="txt-ambient" class="readout">-- &deg;C</span>
+                    </div>
+                    <div>
                         <span class="micro-label">Throttle</span>
                         <span id="txt-throttle" class="readout">--%</span>
                     </div>
                     <div>
                         <span class="micro-label">Load</span>
                         <span id="txt-load" class="readout">--%</span>
+                    </div>
+                    <div>
+                        <span class="micro-label">MAP</span>
+                        <span id="txt-map" class="readout">-- kPa</span>
                     </div>
                     <div>
                         <span class="micro-label">MAF</span>
@@ -305,15 +304,6 @@
                 </div>
             </div>
 
-            <div class="dash-card p-5">
-                <div class="space-y-2">
-                    <label class="field-label block">Outbound Message Console (via SIM800L)</label>
-                    <div class="flex gap-2">
-                        <input type="text" id="input-msg" placeholder="Type data stream payload..." class="dash-input flex-1" />
-                        <button onclick="transmitDriverCommand()" class="btn-primary">Transmit</button>
-                    </div>
-                </div>
-            </div>
         </div>
     </main>
 

@@ -22,12 +22,6 @@ def init_db():
             ts      INTEGER,
             payload TEXT
         );
-
-        CREATE TABLE IF NOT EXISTS platform_status (
-            id      INTEGER PRIMARY KEY AUTOINCREMENT,
-            ts      INTEGER,
-            payload TEXT
-        );
     """)
     conn.commit()
     conn.close()
@@ -41,17 +35,6 @@ def save_telemetry(ts: int, payload: dict):
     conn = get_connection()
     conn.execute(
         "INSERT INTO telemetry (ts, payload) VALUES (?, ?)",
-        (ts, json.dumps(payload))
-    )
-    conn.commit()
-    conn.close()
-
-
-def save_platform_status(ts: int, payload: dict):
-    """Save a platform_status message to the database."""
-    conn = get_connection()
-    conn.execute(
-        "INSERT INTO platform_status (ts, payload) VALUES (?, ?)",
         (ts, json.dumps(payload))
     )
     conn.commit()
@@ -104,13 +87,3 @@ def get_gps_track(limit: int = 200):
         except (json.JSONDecodeError, KeyError):
             continue
     return track
-
-
-def get_platform_history(limit: int = 200):
-    """Return the last N platform_status records, oldest first."""
-    conn = get_connection()
-    rows = conn.execute(
-        "SELECT payload FROM platform_status ORDER BY id DESC LIMIT ?", (limit,)
-    ).fetchall()
-    conn.close()
-    return [json.loads(r["payload"]) for r in reversed(rows)]

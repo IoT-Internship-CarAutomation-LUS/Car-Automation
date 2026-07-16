@@ -4,6 +4,7 @@
 HOST = "0.0.0.0"       # 0.0.0.0 = accessible on the network, not just localhost
 PORT = 8000
 DB_PATH = "telemetry.db"
+<<<<<<< HEAD
 SCHEMA_VERSION = "1.0.0"
 
 # ── Gear Estimation Ratio Thresholds (RPM / speed_kmh) ────────────────────────
@@ -19,3 +20,6 @@ GEAR_RATIO_THRESHOLDS = [
     {"gear": 6, "min_ratio": 15.0,  "max_ratio": 23.9},   # 6th Gear (~20 RPM/kmh)
 ]
 
+=======
+SCHEMA_VERSION = "2.0.0"
+>>>>>>> refs/remotes/origin/main
