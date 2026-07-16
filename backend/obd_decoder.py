@@ -17,6 +17,60 @@ import struct
 import time
 import sys
 
+try:
+    from config import GEAR_RATIO_THRESHOLDS
+except ImportError:
+    # Fallback default ratio thresholds if config.py not accessible directly
+    GEAR_RATIO_THRESHOLDS = [
+        {"gear": 1, "min_ratio": 115.0, "max_ratio": 180.0},
+        {"gear": 2, "min_ratio": 65.0,  "max_ratio": 114.9},
+        {"gear": 3, "min_ratio": 45.0,  "max_ratio": 64.9},
+        {"gear": 4, "min_ratio": 32.0,  "max_ratio": 44.9},
+        {"gear": 5, "min_ratio": 24.0,  "max_ratio": 31.9},
+        {"gear": 6, "min_ratio": 15.0,  "max_ratio": 23.9},
+    ]
+
+
+def calculate_gear(rpm: float, speed_kmh: float, *args, **kwargs) -> int:
+    """
+    Estimate / assume transmission gear (0–6) using ONLY the ratio of RPM to Speed (km/h).
+    Does NOT rely on clutch position since real OBD-II hardware does not report clutch_pct.
+    If stopped or idling while coasting, returns 0 (Neutral).
+    Otherwise matches against GEAR_RATIO_THRESHOLDS defined in config.py.
+    """
+    if speed_kmh < 3 or rpm < 400:
+        return 0
+
+    # If coasting at speed with engine idling (< 1000 RPM while moving > 15 km/h), assume Neutral
+    if rpm < 1000 and speed_kmh > 15:
+        return 0
+
+    ratio = float(rpm) / float(speed_kmh)
+
+    # Check exact threshold bands
+    for band in GEAR_RATIO_THRESHOLDS:
+        if band["min_ratio"] <= ratio <= band["max_ratio"]:
+            return band["gear"]
+
+    # Handle boundary conditions beyond 1st or 6th gear
+    if ratio > 180.0:
+        return 0  # Revving in neutral at near standstill
+    elif ratio < 15.0:
+        return 6  # High overdrive / highway cruise
+
+    # Find closest gear band by midpoint
+    closest_gear = 0
+    min_diff = float("inf")
+    for band in GEAR_RATIO_THRESHOLDS:
+        midpoint = (band["min_ratio"] + band["max_ratio"]) / 2.0
+        diff = abs(ratio - midpoint)
+        if diff < min_diff:
+            min_diff = diff
+            closest_gear = band["gear"]
+
+    return closest_gear
+
+
 # ── PID decode formulas ────────────────────────────────────────────────────────
 # All formulas taken directly from the OBD-II standard (SAE J1979).
 # Reference: MESSAGE_SCHEMA.md §6 and the Vehicle Data Acquisition Standard.
@@ -243,10 +297,15 @@ def unpack_packet(raw_bytes: bytes) -> dict:
     maf_raw, intake_raw, ac_raw, brake_raw, clutch_raw, \
     lat_raw, lng_raw, gps_spd_raw, ts_raw, dtc_raw, batt_raw, sats_raw = fields
 
+    rpm_decoded = round(rpm_raw / 4.0, 1)
+    speed_decoded = speed_raw
+    gear_decoded = calculate_gear(rpm_decoded, speed_decoded)
+
     return {
         "vehicle": {
-            "rpm":               round(rpm_raw / 4.0, 1),
-            "speed_kmh":         speed_raw,
+            "rpm":               rpm_decoded,
+            "speed_kmh":         speed_decoded,
+            "gear":              gear_decoded,
             "coolant_c":         coolant_raw - 40,
             "engine_load_pct":   round(load_raw / 2.55, 1),
             "throttle_pct":      round(throttle_raw / 2.55, 1),
@@ -366,6 +425,30 @@ if __name__ == "__main__":
             if not ok_rt:
                 errors += 1
             print(f"  {tag} RPM round-trip: original={original_rpm} -> unpacked={roundtrip_rpm}")
+
+        # Verify estimated gear is populated in unpacked vehicle dict
+        unpacked_gear = unpacked["vehicle"]["gear"]
+        print(f"  {PASS} Estimated Gear inside unpacked packet: {unpacked_gear} (RPM={unpacked['vehicle']['rpm']}, Speed={unpacked['vehicle']['speed_kmh']}km/h)")
+
+    # ── Test 4: Gear Estimation Algorithm Verification ────────────
+    print("\n[ Test 4 ] Gear estimation algorithm verification (RPM & Speed ratios)")
+    gear_cases = [
+        (800.0,  0.0,  0, "Stopped / Neutral (0 km/h)"),
+        (800.0,  40.0, 0, "Coasting at speed (idle RPM < 1000)"),
+        (2800.0, 20.0, 1, "1st Gear (~140 ratio)"),
+        (2600.0, 32.0, 2, "2nd Gear (~81 ratio)"),
+        (2500.0, 48.0, 3, "3rd Gear (~52 ratio)"),
+        (2500.0, 68.0, 4, "4th Gear (~37 ratio)"),
+        (2400.0, 88.0, 5, "5th Gear (~27 ratio)"),
+        (2200.0, 110.0,6, "6th Gear (~20 ratio)"),
+    ]
+    for rpm_in, spd_in, exp_g, label in gear_cases:
+        calc_g = calculate_gear(rpm_in, spd_in)
+        ok_g = (calc_g == exp_g)
+        tag = PASS if ok_g else FAIL
+        if not ok_g:
+            errors += 1
+        print(f"  {tag} {label}: RPM={rpm_in}, Speed={spd_in} -> got Gear {calc_g} (expected {exp_g})")
 
     # ── Summary ───────────────────────────────────────────────────
     print("\n" + "=" * 60)

@@ -26,7 +26,7 @@ import time
 import serial
 import serial.tools.list_ports
 
-from obd_decoder import decode_pid, pack_packet, unpack_packet
+from obd_decoder import decode_pid, pack_packet, unpack_packet, calculate_gear
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 COM_PORT        = "COM15"                     # Outgoing COM port (from Windows Bluetooth Settings)
@@ -209,7 +209,7 @@ def init_csv(path: str):
     # Change 3: buffering=1 ensures line-buffered output in text mode
     f = open(path, "a", newline="", buffering=1)
     fieldnames = [
-        "ts_ms", "rpm", "speed_kmh", "coolant_c", "engine_load_pct",
+        "ts_ms", "rpm", "speed_kmh", "gear", "coolant_c", "engine_load_pct",
         "throttle_pct", "fuel_level_pct", "maf_gps", "intake_temp_c",
     ]
     writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -222,9 +222,9 @@ def init_csv(path: str):
     return f, writer
 
 
-def log_csv(f, writer: csv.DictWriter, ts_ms: int, decoded: dict):
+def log_csv(f, writer: csv.DictWriter, ts_ms: int, decoded: dict, gear: int = 0):
     """Write one decoded polling cycle and immediately flush to disk (Change 3)."""
-    row = {"ts_ms": ts_ms}
+    row = {"ts_ms": ts_ms, "gear": gear}
     for pid, name in PID_NAMES.items():
         row[name] = decoded.get(pid)
     writer.writerow(row)
@@ -331,10 +331,16 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
 
                     first_cycle = False
 
+                    estimated_gear = calculate_gear(
+                        decoded.get(0x0C) or 0,
+                        decoded.get(0x0D) or 0
+                    )
+
                     # Print live terminal readout
                     print(
                         f"[OBD] RPM={decoded.get(0x0C)} "
                         f"spd={decoded.get(0x0D)}km/h "
+                        f"gear={estimated_gear} "
                         f"cool={decoded.get(0x05)}C "
                         f"fuel={decoded.get(0x2F)}% "
                         f"maf={decoded.get(0x10)}"
@@ -346,7 +352,7 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
                     vehicle_gps = unpack_packet(raw_bytes)
 
                     # Write and flush to CSV (durable - always runs regardless of network)
-                    log_csv(f_csv, csv_writer, ts_ms, decoded)
+                    log_csv(f_csv, csv_writer, ts_ms, decoded, estimated_gear)
 
                     # Change 8: Best-effort WebSocket streaming (decoupled from serial capture)
                     if stream_mode and ws_connect is not None:

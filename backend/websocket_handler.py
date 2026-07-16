@@ -11,6 +11,7 @@ import json
 from fastapi import WebSocket, WebSocketDisconnect
 from database import save_telemetry, save_platform_status
 import config
+from obd_decoder import calculate_gear
 
 # Set of all currently connected WebSocket clients
 connected_clients: set[WebSocket] = set()
@@ -43,6 +44,16 @@ async def websocket_endpoint(websocket: WebSocket):
 
             # ── Route by message type ──────────────────────────────────────
             if msg_type == "telemetry":
+                vehicle = message.get("vehicle")
+                if isinstance(vehicle, dict):
+                    # Automatically estimate/inject gear if missing or 0 while moving
+                    if not vehicle.get("gear") and vehicle.get("speed_kmh", 0) >= 3:
+                        vehicle["gear"] = calculate_gear(
+                            vehicle.get("rpm", 0),
+                            vehicle.get("speed_kmh", 0)
+                        )
+                        raw = json.dumps(message)
+
                 save_telemetry(ts, message)
                 await fan_out(raw, sender=websocket)
 
