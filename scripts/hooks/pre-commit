@@ -1,0 +1,40 @@
+#!/bin/sh
+# Refuse to commit staged files that still contain unresolved git merge
+# conflict markers. A botched merge (89e4c6b) committed <<<<<<< HEAD /
+# ======= / >>>>>>> markers straight into main in three files, which broke
+# obd_decoder.py, elm327_bt.py, and config.py (SyntaxError -- none of them
+# would even import) and cost a GPS acquisition session before anyone
+# noticed. This is a one-line grep away from never happening again.
+#
+# This file is tracked in the repo, not left in .git/hooks (which is
+# per-clone and never checked in). It only runs for people who have set:
+#   git config core.hooksPath scripts/hooks
+# See CONTRIBUTING.md.
+
+conflict_pattern='^(<<<<<<<|=======|>>>>>>>)'
+found=0
+
+for file in $(git diff --cached --name-only --diff-filter=ACM); do
+    # Skip binary files -- grep -I already does this, but be explicit.
+    if git diff --cached -- "$file" | grep -Iq .; then
+        match=$(git show ":$file" | grep -nE "$conflict_pattern" | head -5)
+        if [ -n "$match" ]; then
+            if [ "$found" -eq 0 ]; then
+                echo "pre-commit: unresolved merge conflict markers found in staged files:"
+                echo
+            fi
+            found=1
+            echo "  $file"
+            echo "$match" | sed 's/^/    /'
+            echo
+        fi
+    fi
+done
+
+if [ "$found" -ne 0 ]; then
+    echo "Resolve the conflicts (remove <<<<<<<, =======, >>>>>>> and pick the" >&2
+    echo "correct content) before committing." >&2
+    exit 1
+fi
+
+exit 0
