@@ -28,12 +28,8 @@ from pathlib import Path
 import serial
 import serial.tools.list_ports
 
-<<<<<<< HEAD
-from obd_decoder import decode_pid, pack_packet, unpack_packet, calculate_gear
-=======
-from obd_decoder import decode_pid, decode_atrv, pack_packet, unpack_packet, TARGET_PIDS
+from obd_decoder import decode_pid, decode_atrv, pack_packet, unpack_packet, TARGET_PIDS, calculate_gear
 from session_logger import SessionLogger
->>>>>>> refs/remotes/origin/main
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 COM_PORT        = "COM15"                     # Outgoing COM port (from Windows Bluetooth Settings)
@@ -213,22 +209,6 @@ def query_pid(ser: serial.Serial, pid: int, fast: bool = False, is_first: bool =
 
 # ── Mode 0: Port Scan ──────────────────────────────────────────────────────────
 
-<<<<<<< HEAD
-def init_csv(path: str):
-    """Open session CSV with line buffering and flush after headers."""
-    file_exists = os.path.exists(path)
-    # Change 3: buffering=1 ensures line-buffered output in text mode
-    f = open(path, "a", newline="", buffering=1)
-    fieldnames = [
-        "ts_ms", "rpm", "speed_kmh", "gear", "coolant_c", "engine_load_pct",
-        "throttle_pct", "fuel_level_pct", "maf_gps", "intake_temp_c",
-    ]
-    writer = csv.DictWriter(f, fieldnames=fieldnames)
-    if not file_exists:
-        writer.writeheader()
-        f.flush()
-        print(f"[CSV] Created session log: {path}")
-=======
 def run_scan():
     """
     Walk every available COM port and find the one the ELM327 answers on.
@@ -295,23 +275,11 @@ def run_scan():
             print(f"  {device} -> {resp!r}")
         print(f"[SCAN] Set COM_PORT = \"{hits[0][0]}\" in elm327_bt.py"
               + (" (or try each hit if more than one)." if len(hits) > 1 else "."))
->>>>>>> refs/remotes/origin/main
     else:
         print("[SCAN] No hits. Is the ELM327 powered (12V from the car's OBD port) and paired?")
     print("-" * 55)
 
-<<<<<<< HEAD
-
-def log_csv(f, writer: csv.DictWriter, ts_ms: int, decoded: dict, gear: int = 0):
-    """Write one decoded polling cycle and immediately flush to disk (Change 3)."""
-    row = {"ts_ms": ts_ms, "gear": gear}
-    for pid, name in PID_NAMES.items():
-        row[name] = decoded.get(pid)
-    writer.writerow(row)
-    f.flush()   # Change 3: flush after every row so data survives hard kill/power loss
-=======
     log.close()
->>>>>>> refs/remotes/origin/main
 
 
 # ── Mode 1: Test Mode (Change 7) ───────────────────────────────────────────────
@@ -467,43 +435,36 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
 
                     first_cycle = False
 
-<<<<<<< HEAD
-                    estimated_gear = calculate_gear(
-                        decoded.get(0x0C) or 0,
-                        decoded.get(0x0D) or 0
-                    )
-=======
                     # Real battery reading via ATRV -- works even with no ECU present.
                     ser.reset_input_buffer()
                     ser.write(b"ATRV\r")
                     battery_v = decode_atrv(read_until_prompt(ser, timeout=2.0))
->>>>>>> refs/remotes/origin/main
 
                     # Print live terminal readout
                     print(
                         f"[OBD] RPM={decoded.get(0x0C)} "
                         f"spd={decoded.get(0x0D)}km/h "
-                        f"gear={estimated_gear} "
                         f"cool={decoded.get(0x05)}C "
                         f"fuel={decoded.get(0x2F)}% "
                         f"maf={decoded.get(0x10)} "
                         f"batt={battery_v}V"
                     )
 
+                    estimated_gear = calculate_gear(
+                        decoded.get(0x0C) or 0,
+                        decoded.get(0x0D) or 0
+                    )
+
                     seq = (seq + 1) & 0xFF
                     gps = {"lat": None, "lng": None, "sats": 0, "fix": False}   # until GPS is wired
                     extras = {
                         "battery_v": battery_v,
-                        "gear": None,
+                        "gear": estimated_gear,
                         "seq": seq,
                         "can": {"brake": None, "clutch": None, "ac": None},   # not found yet
                         "health": {"power_ok": True, "gps_ok": gps["fix"], "can_ok": False},
                     }
 
-<<<<<<< HEAD
-                    # Write and flush to CSV (durable - always runs regardless of network)
-                    log_csv(f_csv, csv_writer, ts_ms, decoded, estimated_gear)
-=======
                     # Pack/unpack roundtrip verification per standard --
                     # validates the CRC against real car data before the ESP32 stage needs it.
                     raw_bytes  = pack_packet(decoded, gps, extras)
@@ -515,7 +476,6 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
 
                     # Durable log -- always runs regardless of network
                     log.log_decoded(decoded, PID_NAMES, packet_hex=packet_hex)
->>>>>>> refs/remotes/origin/main
 
                     # Change 8: Best-effort WebSocket streaming (decoupled from serial capture)
                     if stream_mode and ws_connect is not None:

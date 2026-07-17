@@ -29,7 +29,6 @@ import struct
 import time
 import sys
 
-<<<<<<< HEAD
 try:
     from config import GEAR_RATIO_THRESHOLDS
 except ImportError:
@@ -46,7 +45,7 @@ except ImportError:
 
 def calculate_gear(rpm: float, speed_kmh: float, *args, **kwargs) -> int:
     """
-    Estimate / assume transmission gear (0–6) using ONLY the ratio of RPM to Speed (km/h).
+    Estimate / assume transmission gear (0-6) using ONLY the ratio of RPM to Speed (km/h).
     Does NOT rely on clutch position since real OBD-II hardware does not report clutch_pct.
     If stopped or idling while coasting, returns 0 (Neutral).
     Otherwise matches against GEAR_RATIO_THRESHOLDS defined in config.py.
@@ -84,12 +83,7 @@ def calculate_gear(rpm: float, speed_kmh: float, *args, **kwargs) -> int:
     return closest_gear
 
 
-# ── PID decode formulas ────────────────────────────────────────────────────────
-# All formulas taken directly from the OBD-II standard (SAE J1979).
-# Reference: MESSAGE_SCHEMA.md §6 and the Vehicle Data Acquisition Standard.
-=======
 SCHEMA_VERSION = "2.0.0"
->>>>>>> refs/remotes/origin/main
 
 # -- Sentinels: what "unavailable" looks like on the wire ----------------------
 U8_NA  = 0xFF
@@ -377,30 +371,10 @@ def unpack_packet(raw_bytes: bytes) -> dict:
     def _flag(state_bit, valid_bit):
         return bool(flags & (1 << state_bit)) if (flags & (1 << valid_bit)) else None
 
-    rpm_decoded = round(rpm_raw / 4.0, 1)
-    speed_decoded = speed_raw
-    gear_decoded = calculate_gear(rpm_decoded, speed_decoded)
-
     return {
         "schema_version": SCHEMA_VERSION,
         "ts": ts * 1000,
         "vehicle": {
-<<<<<<< HEAD
-            "rpm":               rpm_decoded,
-            "speed_kmh":         speed_decoded,
-            "gear":              gear_decoded,
-            "coolant_c":         coolant_raw - 40,
-            "engine_load_pct":   round(load_raw / 2.55, 1),
-            "throttle_pct":      round(throttle_raw / 2.55, 1),
-            "fuel_level_pct":    fuel_raw,
-            "maf_gps":           round(maf_raw / 100.0, 2),
-            "intake_temp_c":     intake_raw - 40,
-            "ac_on":             bool(ac_raw),
-            "brake":             bool(brake_raw),
-            "clutch_pct":        clutch_raw,
-            "dtc_count":         dtc_raw,
-            "battery_mv":        batt_raw,
-=======
             "rpm":              _r_u16(rpm_r, 4),
             "speed_kmh":        _r_u8(spd_r),
             "gear":             None if gear_r == U8_NA else gear_r,
@@ -418,7 +392,6 @@ def unpack_packet(raw_bytes: bytes) -> dict:
             "brake":            _flag(0, 1),
             "clutch":           _flag(2, 3),
             "ac_on":            _flag(4, 5),
->>>>>>> refs/remotes/origin/main
         },
         "gps": {
             "lat":  _r_coord(lat_r),
@@ -522,61 +495,7 @@ if __name__ == "__main__":
     bad = bytearray(pkt); bad[6], bad[7] = bad[7], bad[6]
     check(unpack_packet(bytes(bad))["crc_valid"] is False, "byte swap caught")
 
-<<<<<<< HEAD
-    # ── Test 3: Full pipeline with mock_obd ───────────────────────
-    print(f"\n[ Test 3 ] Full pipeline — mock_obd -> decode -> pack -> unpack")
-    print(f"  Unsupported PIDs: {[hex(p) for p in UNSUPPORTED_PIDS] or 'none'}")
-
-    GPS_PLACEHOLDER = {"lat": 12.920364, "lng": 80.131663, "speed_kmh": 60, "sats": 7}
-
-    for tick in range(1, 4):
-        print(f"\n  --- Tick {tick} ---")
-        raw_responses = get_all_responses()
-
-        # Decode all PIDs
-        decoded = {pid: decode_pid(resp) for pid, resp in raw_responses.items()}
-
-        # Print decoded values
-        PID_NAMES = {0x0C:"RPM", 0x0D:"Speed", 0x05:"Coolant", 0x04:"Load",
-                     0x11:"Throttle", 0x2F:"Fuel", 0x10:"MAF", 0x0F:"Intake"}
-        for pid, val in decoded.items():
-            raw = raw_responses[pid]
-            name = PID_NAMES.get(pid, hex(pid))
-            null_note = " <- null (7F)" if val is None else ""
-            print(f"    [{hex(pid)}] {name:<12} raw: {raw:<20} decoded: {val}{null_note}")
-
-        # Pack into 32-byte packet
-        packet = pack_packet(decoded, GPS_PLACEHOLDER)
-        ok_len = len(packet) == 32
-        tag = PASS if ok_len else FAIL
-        if not ok_len:
-            errors += 1
-        print(f"  {tag} Packet packed: {len(packet)} bytes")
-
-        # Unpack and verify checksum
-        unpacked = unpack_packet(packet)
-        ok_checksum = unpacked["checksum_valid"]
-        tag = PASS if ok_checksum else FAIL
-        if not ok_checksum:
-            errors += 1
-        print(f"  {tag} Checksum valid: {ok_checksum}")
-
-        # Verify round-trip RPM (if not unsupported)
-        if decoded.get(0x0C) is not None:
-            original_rpm = decoded[0x0C]
-            roundtrip_rpm = unpacked["vehicle"]["rpm"]
-            ok_rt = abs(original_rpm - roundtrip_rpm) < 1.0
-            tag = PASS if ok_rt else FAIL
-            if not ok_rt:
-                errors += 1
-            print(f"  {tag} RPM round-trip: original={original_rpm} -> unpacked={roundtrip_rpm}")
-
-        # Verify estimated gear is populated in unpacked vehicle dict
-        unpacked_gear = unpacked["vehicle"]["gear"]
-        print(f"  {PASS} Estimated Gear inside unpacked packet: {unpacked_gear} (RPM={unpacked['vehicle']['rpm']}, Speed={unpacked['vehicle']['speed_kmh']}km/h)")
-
-    # ── Test 4: Gear Estimation Algorithm Verification ────────────
-    print("\n[ Test 4 ] Gear estimation algorithm verification (RPM & Speed ratios)")
+    print("\n[7] Gear estimation algorithm (RPM/speed ratio bands) -- unvalidated against a moving car")
     gear_cases = [
         (800.0,  0.0,  0, "Stopped / Neutral (0 km/h)"),
         (800.0,  40.0, 0, "Coasting at speed (idle RPM < 1000)"),
@@ -589,21 +508,11 @@ if __name__ == "__main__":
     ]
     for rpm_in, spd_in, exp_g, label in gear_cases:
         calc_g = calculate_gear(rpm_in, spd_in)
-        ok_g = (calc_g == exp_g)
-        tag = PASS if ok_g else FAIL
-        if not ok_g:
-            errors += 1
-        print(f"  {tag} {label}: RPM={rpm_in}, Speed={spd_in} -> got Gear {calc_g} (expected {exp_g})")
+        check(calc_g == exp_g, f"{label}: RPM={rpm_in}, Speed={spd_in}", f"-> got Gear {calc_g} (expected {exp_g})")
 
-    # ── Summary ───────────────────────────────────────────────────
-    print("\n" + "=" * 60)
-    if errors == 0:
-        print("  \033[92mALL TESTS PASSED\033[0m — pipeline ready for hardware integration.")
-=======
     print("\n" + "=" * 62)
     if errs == 0:
         print("  \033[92mALL TESTS PASSED\033[0m -- v2 packet is sound.")
->>>>>>> refs/remotes/origin/main
     else:
         print(f"  \033[91m{errs} TEST(S) FAILED\033[0m")
     print("=" * 62)
