@@ -17,10 +17,13 @@
 #   python elm327_bt.py --fast          : Faster polling ("01 0C 1" frame count suffix)
 #   python elm327_bt.py --raw --fast    : Combine modifiers
 #   python elm327_bt.py --stream        : Also forward telemetry to the backend over WebSocket
+#   python elm327_bt.py --tcp <host> [port] : Also forward the raw 32-byte packet over TCP
+#                                              (default port 9000, matching the receivers' DEFAULT_PORT)
 #
 # Requires: pip install pyserial
 
 import json
+import socket
 import sys
 import threading
 import time
@@ -28,12 +31,8 @@ from pathlib import Path
 import serial
 import serial.tools.list_ports
 
-<<<<<<< HEAD
-from obd_decoder import decode_pid, pack_packet, unpack_packet, calculate_gear
-=======
-from obd_decoder import decode_pid, decode_atrv, pack_packet, unpack_packet, TARGET_PIDS
+from obd_decoder import decode_pid, decode_atrv, pack_packet, unpack_packet, TARGET_PIDS, calculate_gear
 from session_logger import SessionLogger
->>>>>>> refs/remotes/origin/main
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 COM_PORT        = "COM15"                     # Outgoing COM port (from Windows Bluetooth Settings)
@@ -41,6 +40,7 @@ BAUD_RATE       = 38400                      # Try 9600 if responses are garbled
 READ_TIMEOUT    = 2.0                        # seconds to wait per PID response (Change 5)
 POLL_INTERVAL   = 1.0                        # seconds between full polling cycles
 BACKEND_WS_URL  = "wss://api.nalusa.space/ws" # WebSocket streaming URL (Change 8)
+TCP_DEFAULT_PORT = 9000                      # matches raw_receiver.py / decoded_receiver.py DEFAULT_PORT
 # Anchored to <repo root>/logs -- a relative "logs" resolves against the
 # CWD, not the script, so running from the repo root vs. from backend/
 # would silently split one car session's data across two directories.
@@ -213,22 +213,6 @@ def query_pid(ser: serial.Serial, pid: int, fast: bool = False, is_first: bool =
 
 # ── Mode 0: Port Scan ──────────────────────────────────────────────────────────
 
-<<<<<<< HEAD
-def init_csv(path: str):
-    """Open session CSV with line buffering and flush after headers."""
-    file_exists = os.path.exists(path)
-    # Change 3: buffering=1 ensures line-buffered output in text mode
-    f = open(path, "a", newline="", buffering=1)
-    fieldnames = [
-        "ts_ms", "rpm", "speed_kmh", "gear", "coolant_c", "engine_load_pct",
-        "throttle_pct", "fuel_level_pct", "maf_gps", "intake_temp_c",
-    ]
-    writer = csv.DictWriter(f, fieldnames=fieldnames)
-    if not file_exists:
-        writer.writeheader()
-        f.flush()
-        print(f"[CSV] Created session log: {path}")
-=======
 def run_scan():
     """
     Walk every available COM port and find the one the ELM327 answers on.
@@ -295,23 +279,11 @@ def run_scan():
             print(f"  {device} -> {resp!r}")
         print(f"[SCAN] Set COM_PORT = \"{hits[0][0]}\" in elm327_bt.py"
               + (" (or try each hit if more than one)." if len(hits) > 1 else "."))
->>>>>>> refs/remotes/origin/main
     else:
         print("[SCAN] No hits. Is the ELM327 powered (12V from the car's OBD port) and paired?")
     print("-" * 55)
 
-<<<<<<< HEAD
-
-def log_csv(f, writer: csv.DictWriter, ts_ms: int, decoded: dict, gear: int = 0):
-    """Write one decoded polling cycle and immediately flush to disk (Change 3)."""
-    row = {"ts_ms": ts_ms, "gear": gear}
-    for pid, name in PID_NAMES.items():
-        row[name] = decoded.get(pid)
-    writer.writerow(row)
-    f.flush()   # Change 3: flush after every row so data survives hard kill/power loss
-=======
     log.close()
->>>>>>> refs/remotes/origin/main
 
 
 # ── Mode 1: Test Mode (Change 7) ───────────────────────────────────────────────
@@ -378,7 +350,8 @@ def run_test_mode():
 
 # ── Mode 2: Synchronous Capture Session (Changes 1, 8, & 9) ────────────────────
 
-def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bool = False):
+def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bool = False,
+                 tcp_host: str = None, tcp_port: int = TCP_DEFAULT_PORT):
     """Synchronous capture loop decoupled from network dependency."""
     log = SessionLogger(LOG_DIR)
     print(f"[LOG] Session logs -> {LOG_DIR}")
@@ -395,6 +368,11 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
             print("[WS] ERROR: 'websockets' package not installed (`pip install websockets`). Running offline.")
             log.log_stream("import_failed", "websockets package missing")
             stream_mode = False
+
+    tcp_mode = tcp_host is not None
+    tcp_sock = None
+    if tcp_mode:
+        print(f"[TCP] --tcp enabled. Will forward raw packets best-effort to {tcp_host}:{tcp_port}")
 
     def drain_incoming():
         """
@@ -445,6 +423,8 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
                 print("[OBD] --fast modifier enabled: appending frame count suffix ('1')")
             if stream_mode:
                 print("[OBD] --stream modifier enabled: live WebSocket forwarding active")
+            if tcp_mode:
+                print(f"[OBD] --tcp modifier enabled: raw packet forwarding to {tcp_host}:{tcp_port} active")
 
             first_cycle = True
             try:
@@ -467,43 +447,36 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
 
                     first_cycle = False
 
-<<<<<<< HEAD
-                    estimated_gear = calculate_gear(
-                        decoded.get(0x0C) or 0,
-                        decoded.get(0x0D) or 0
-                    )
-=======
                     # Real battery reading via ATRV -- works even with no ECU present.
                     ser.reset_input_buffer()
                     ser.write(b"ATRV\r")
                     battery_v = decode_atrv(read_until_prompt(ser, timeout=2.0))
->>>>>>> refs/remotes/origin/main
 
                     # Print live terminal readout
                     print(
                         f"[OBD] RPM={decoded.get(0x0C)} "
                         f"spd={decoded.get(0x0D)}km/h "
-                        f"gear={estimated_gear} "
                         f"cool={decoded.get(0x05)}C "
                         f"fuel={decoded.get(0x2F)}% "
                         f"maf={decoded.get(0x10)} "
                         f"batt={battery_v}V"
                     )
 
+                    estimated_gear = calculate_gear(
+                        decoded.get(0x0C) or 0,
+                        decoded.get(0x0D) or 0
+                    )
+
                     seq = (seq + 1) & 0xFF
                     gps = {"lat": None, "lng": None, "sats": 0, "fix": False}   # until GPS is wired
                     extras = {
                         "battery_v": battery_v,
-                        "gear": None,
+                        "gear": estimated_gear,
                         "seq": seq,
                         "can": {"brake": None, "clutch": None, "ac": None},   # not found yet
                         "health": {"power_ok": True, "gps_ok": gps["fix"], "can_ok": False},
                     }
 
-<<<<<<< HEAD
-                    # Write and flush to CSV (durable - always runs regardless of network)
-                    log_csv(f_csv, csv_writer, ts_ms, decoded, estimated_gear)
-=======
                     # Pack/unpack roundtrip verification per standard --
                     # validates the CRC against real car data before the ESP32 stage needs it.
                     raw_bytes  = pack_packet(decoded, gps, extras)
@@ -515,7 +488,6 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
 
                     # Durable log -- always runs regardless of network
                     log.log_decoded(decoded, PID_NAMES, packet_hex=packet_hex)
->>>>>>> refs/remotes/origin/main
 
                     # Change 8: Best-effort WebSocket streaming (decoupled from serial capture)
                     if stream_mode and ws_connect is not None:
@@ -557,6 +529,32 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
                                     pass
                                 ws_client = None
 
+                    # Best-effort raw TCP forwarding (decoupled from serial capture,
+                    # same discipline as --stream: never blocks or drops a CSV row)
+                    if tcp_mode:
+                        if tcp_sock is None:
+                            try:
+                                tcp_sock = socket.create_connection((tcp_host, tcp_port), timeout=2.0)
+                                print(f"[TCP] Connected to {tcp_host}:{tcp_port}")
+                                log.log_stream("tcp_connected", f"{tcp_host}:{tcp_port}")
+                            except Exception as e:
+                                print(f"[TCP] Connect warning ({e}) -- continuing offline capture.")
+                                log.log_stream("tcp_connect_failed", str(e))
+                                tcp_sock = None
+
+                        if tcp_sock is not None:
+                            try:
+                                tcp_sock.sendall(raw_bytes)
+                                log.log_stream("tcp_sent", f"rpm={decoded.get(0x0C)}")
+                            except Exception as e:
+                                print(f"[TCP] Send failed ({e}) -- connection dropped. Continuing capture.")
+                                log.log_stream("tcp_send_failed", str(e))
+                                try:
+                                    tcp_sock.close()
+                                except Exception:
+                                    pass
+                                tcp_sock = None
+
                     elapsed = time.time() - cycle_start
                     sleep_for = max(0, POLL_INTERVAL - elapsed)
                     time.sleep(sleep_for)
@@ -579,6 +577,13 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
                 print("[WS] WebSocket connection closed.")
             except Exception:
                 pass
+        if tcp_mode and tcp_sock is not None:
+            try:
+                tcp_sock.close()
+                log.log_stream("tcp_closed", "clean shutdown")
+                print("[TCP] TCP connection closed.")
+            except Exception:
+                pass
         log.close()
 
 
@@ -588,6 +593,17 @@ if __name__ == "__main__":
     raw_mode    = "--raw" in sys.argv
     fast_mode   = "--fast" in sys.argv
     stream_mode = "--stream" in sys.argv
+
+    tcp_host = None
+    tcp_port = TCP_DEFAULT_PORT
+    if "--tcp" in sys.argv:
+        idx = sys.argv.index("--tcp")
+        if idx + 1 >= len(sys.argv):
+            print("[TCP] ERROR: --tcp requires a <host> argument.")
+            sys.exit(1)
+        tcp_host = sys.argv[idx + 1]
+        if idx + 2 < len(sys.argv) and sys.argv[idx + 2].isdigit():
+            tcp_port = int(sys.argv[idx + 2])
 
     if scan_mode:
         run_scan()
@@ -599,9 +615,11 @@ if __name__ == "__main__":
         print(f"  COM Port : {COM_PORT}  |  Baud: {BAUD_RATE}")
         print(f"  Log Dir  : {LOG_DIR}")
         print(f"  Backend  : {BACKEND_WS_URL if stream_mode else 'DISABLED (offline mode)'}")
-        print(f"  Modes    : stream={stream_mode}, raw={raw_mode}, fast={fast_mode}")
+        print(f"  TCP      : {f'{tcp_host}:{tcp_port}' if tcp_host else 'DISABLED'}")
+        print(f"  Modes    : stream={stream_mode}, tcp={bool(tcp_host)}, raw={raw_mode}, fast={fast_mode}")
         print("=" * 55)
         try:
-            run_capture(raw_mode=raw_mode, fast_mode=fast_mode, stream_mode=stream_mode)
+            run_capture(raw_mode=raw_mode, fast_mode=fast_mode, stream_mode=stream_mode,
+                        tcp_host=tcp_host, tcp_port=tcp_port)
         except KeyboardInterrupt:
             print("\n[OBD] Stopped by user.")

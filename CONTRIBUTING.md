@@ -39,6 +39,21 @@ Anything that sends or receives data must match [`docs/MESSAGE_SCHEMA.md`](docs/
 
 When your track's status changes (e.g. from research to working), tell the lead so the README status board stays accurate. That board is what leadership looks at.
 
+## 8. Set up the shared git hooks (one-time, do this now)
+
+A merge with unresolved `<<<<<<< HEAD` / `=======` / `>>>>>>>` conflict markers
+was committed straight to `main` and broke `obd_decoder.py`, `elm327_bt.py`,
+and `config.py` — none of them would even import. It cost a GPS acquisition
+session before anyone noticed. There's a hook that catches this before it
+can happen again, but it only runs if you point git at it:
+
+```
+git config core.hooksPath scripts/hooks
+```
+
+Run that once per clone. After that, `git commit` refuses to let conflict
+markers land in a staged file, full stop.
+
 ---
 
 Questions or blocked on something? Message the lead — don't sit blocked quietly.
