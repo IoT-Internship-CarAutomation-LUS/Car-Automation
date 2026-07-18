@@ -34,6 +34,12 @@ import serial.tools.list_ports
 from obd_decoder import decode_pid, decode_atrv, pack_packet, unpack_packet, TARGET_PIDS, calculate_gear
 from session_logger import SessionLogger
 
+# sensing/ is a sibling of backend/, not on the default import path -- add
+# the repo root once so the NEO-6M's tested NMEA parser can be imported
+# instead of forked/duplicated here (see gps_reader_thread() below).
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from sensing.gps_neo6m_pi import NMEAParser
+
 # ── Configuration ──────────────────────────────────────────────────────────────
 COM_PORT        = "COM15"                     # Outgoing COM port (from Windows Bluetooth Settings)
 BAUD_RATE       = 38400                      # Try 9600 if responses are garbled
@@ -41,6 +47,9 @@ READ_TIMEOUT    = 2.0                        # seconds to wait per PID response 
 POLL_INTERVAL   = 1.0                        # seconds between full polling cycles
 BACKEND_WS_URL  = "wss://api.nalusa.space/ws" # WebSocket streaming URL (Change 8)
 TCP_DEFAULT_PORT = 9000                      # matches raw_receiver.py / decoded_receiver.py DEFAULT_PORT
+GPS_PORT        = "/dev/serial0"             # NEO-6M on the Pi's UART (see sensing/gps_neo6m_pi.py)
+GPS_BAUD        = 9600
+GPS_FRESH_S     = 5.0                        # a gps_state reading older than this reads as no-fix
 # Anchored to <repo root>/logs -- a relative "logs" resolves against the
 # CWD, not the script, so running from the repo root vs. from backend/
 # would silently split one car session's data across two directories.
@@ -211,6 +220,144 @@ def query_pid(ser: serial.Serial, pid: int, fast: bool = False, is_first: bool =
     return response
 
 
+# ── GPS reader (background thread) ──────────────────────────────────────────────
+# Runs once for the life of the process, independent of the OBD reconnect
+# loop below -- a Bluetooth drop on the ELM327 side must not interrupt GPS
+# fixes, and vice versa. Parsing logic (checksum, DDMM.MMMM -> decimal
+# degrees, GGA/RMC state machine) is NMEAParser from sensing/gps_neo6m_pi.py,
+# reused as-is so it can't drift from the tested standalone reader.
+
+gps_state = {"lat": None, "lng": None, "sats": 0, "fix": False, "last_update": 0.0}
+gps_lock  = threading.Lock()
+
+_gps_thread_lock    = threading.Lock()
+_gps_thread_started = False
+
+
+def gps_reader_thread():
+    """
+    Background NMEA reader for the NEO-6M on GPS_PORT. Never raises out --
+    a missing module, a disconnected cable, or a garbled sentence all just
+    mean gps_state goes stale and get_gps_snapshot() reports honest null.
+
+    Reads with ser.read(ser.in_waiting or 1), the same pattern
+    read_until_prompt() uses for the OBD link above, rather than
+    ser.readline() -- it only depends on the read()/in_waiting/close()
+    surface this file's own serial usage already relies on.
+    """
+    parser = NMEAParser()
+    ser = None
+    buf = bytearray()
+    last_open_warn = 0.0
+
+    while True:
+        if ser is None:
+            try:
+                ser = serial.Serial(GPS_PORT, GPS_BAUD, timeout=1.0)
+                print(f"[GPS] Opened {GPS_PORT} at {GPS_BAUD} baud.")
+            except Exception as e:
+                now = time.time()
+                if now - last_open_warn > 30:
+                    print(f"[GPS] Cannot open {GPS_PORT}: {e} -- retrying quietly.")
+                    last_open_warn = now
+                ser = None
+                time.sleep(3)
+                continue
+
+        try:
+            chunk = ser.read(ser.in_waiting or 1)
+        except Exception as e:
+            print(f"[GPS] Read error ({e}) -- reopening port.")
+            try:
+                ser.close()
+            except Exception:
+                pass
+            ser = None
+            time.sleep(1)
+            continue
+
+        if not chunk:
+            continue
+        buf += chunk
+
+        while b"\n" in buf:
+            idx = buf.index(b"\n")
+            raw_line = bytes(buf[:idx])
+            del buf[:idx + 1]
+
+            try:
+                line = raw_line.decode("ascii", errors="ignore").strip()
+                if not line:
+                    continue
+                parsed = parser.parse_sentence(line)
+            except Exception:
+                # A bad/garbled NMEA line must never take this thread down.
+                continue
+
+            if not parsed:
+                continue
+
+            with gps_lock:
+                gps_state["lat"]         = parser.state["lat"]
+                gps_state["lng"]         = parser.state["lng"]
+                gps_state["sats"]        = parser.state["sats"]
+                gps_state["fix"]         = parser.state["fix"]
+                gps_state["last_update"] = time.time()
+
+
+def start_gps_thread():
+    """Start the GPS reader thread once per process (idempotent)."""
+    global _gps_thread_started
+    with _gps_thread_lock:
+        if _gps_thread_started:
+            return
+        threading.Thread(target=gps_reader_thread, daemon=True, name="gps-reader").start()
+        _gps_thread_started = True
+
+
+def get_gps_snapshot(max_age_s: float = GPS_FRESH_S) -> dict:
+    """
+    A live snapshot of gps_state -- honest null unless the reader thread
+    has a fix newer than max_age_s. Never returns stale coordinates.
+    """
+    with gps_lock:
+        fix         = gps_state["fix"]
+        last_update = gps_state["last_update"]
+        lat         = gps_state["lat"]
+        lng         = gps_state["lng"]
+        sats        = gps_state["sats"]
+
+    if fix and (time.time() - last_update) < max_age_s:
+        return {"lat": lat, "lng": lng, "sats": sats, "fix": True}
+    return {"lat": None, "lng": None, "sats": 0, "fix": False}
+
+
+def run_gps_test(duration_s: float = 45.0):
+    """
+    Standalone proof step (--gps-test): start the reader thread alone and
+    print gps_state once a second, so real fixes can be confirmed against
+    a NEO-6M before the packet pipeline (run_capture) ever touches it.
+    """
+    print("=" * 55)
+    print("  GPS READER -- STANDALONE TEST (--gps-test)")
+    print("=" * 55)
+    print(f"[GPS] Port: {GPS_PORT} @ {GPS_BAUD} baud. "
+          f"Printing gps_state once/sec for {int(duration_s)}s (Ctrl+C to stop early)...")
+    start_gps_thread()
+    start = time.time()
+    try:
+        while time.time() - start < duration_s:
+            with gps_lock:
+                snap = dict(gps_state)
+            age = (time.time() - snap["last_update"]) if snap["last_update"] else float("inf")
+            print(f"[GPS] lat={snap['lat']} lng={snap['lng']} sats={snap['sats']} "
+                  f"fix={snap['fix']} age={age:.1f}s")
+            time.sleep(1.0)
+    except KeyboardInterrupt:
+        print("\n[GPS] Test stopped by user.")
+    print("[GPS] Standalone test complete.")
+
+
 # ── Mode 0: Port Scan ──────────────────────────────────────────────────────────
 
 def run_scan():
@@ -357,6 +504,8 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
     print(f"[LOG] Session logs -> {LOG_DIR}")
     print(f"[LOG] Session {log.session_id} started.")
 
+    start_gps_thread()   # background NMEA reader; independent of the OBD reconnect loop below
+
     seq = 0
     ws_client = None
     ws_connect = None
@@ -468,7 +617,7 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
                     )
 
                     seq = (seq + 1) & 0xFF
-                    gps = {"lat": None, "lng": None, "sats": 0, "fix": False}   # until GPS is wired
+                    gps = get_gps_snapshot()
                     extras = {
                         "battery_v": battery_v,
                         "gear": estimated_gear,
@@ -476,6 +625,12 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
                         "can": {"brake": None, "clutch": None, "ac": None},   # not found yet
                         "health": {"power_ok": True, "gps_ok": gps["fix"], "can_ok": False},
                     }
+
+                    if raw_mode:
+                        if gps["fix"]:
+                            print(f"[GPS] lat={gps['lat']} lng={gps['lng']} sats={gps['sats']} fix={gps['fix']}")
+                        else:
+                            print(f"[GPS] no fix (sats={gps['sats']})")
 
                     # Pack/unpack roundtrip verification per standard --
                     # validates the CRC against real car data before the ESP32 stage needs it.
@@ -487,7 +642,7 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
                     print(f"[PACKET] {packet_hex}")
 
                     # Durable log -- always runs regardless of network
-                    log.log_decoded(decoded, PID_NAMES, packet_hex=packet_hex)
+                    log.log_decoded(decoded, PID_NAMES, packet_hex=packet_hex, gps=gps)
 
                     # Change 8: Best-effort WebSocket streaming (decoupled from serial capture)
                     if stream_mode and ws_connect is not None:
@@ -588,11 +743,12 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
 
 
 if __name__ == "__main__":
-    scan_mode   = "--scan" in sys.argv
-    test_mode   = "--test" in sys.argv
-    raw_mode    = "--raw" in sys.argv
-    fast_mode   = "--fast" in sys.argv
-    stream_mode = "--stream" in sys.argv
+    scan_mode     = "--scan" in sys.argv
+    test_mode     = "--test" in sys.argv
+    gps_test_mode = "--gps-test" in sys.argv
+    raw_mode      = "--raw" in sys.argv
+    fast_mode     = "--fast" in sys.argv
+    stream_mode   = "--stream" in sys.argv
 
     tcp_host = None
     tcp_port = TCP_DEFAULT_PORT
@@ -609,6 +765,8 @@ if __name__ == "__main__":
         run_scan()
     elif test_mode:
         run_test_mode()
+    elif gps_test_mode:
+        run_gps_test()
     else:
         print("=" * 55)
         print("  ELM327 Bluetooth OBD-II Acquisition Script")

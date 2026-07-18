@@ -36,6 +36,7 @@ FIELDS = {
         "rpm", "speed_kmh", "coolant_c", "engine_load_pct",
         "throttle_pct", "fuel_level_pct", "maf_gps", "intake_temp_c",
         "ambient_temp_c", "map_kpa", "mil_on", "dtc_count",
+        "gps_lat", "gps_lng", "gps_sats", "gps_fix",
         "packet_hex",
     ],
     "raw": _TRACKING + [
@@ -118,7 +119,7 @@ class SessionLogger:
 
     # ── public API ─────────────────────────────────────────────────────────
 
-    def log_decoded(self, decoded: dict, pid_names: dict, packet_hex: str = ""):
+    def log_decoded(self, decoded: dict, pid_names: dict, packet_hex: str = "", gps: dict = None):
         """One row per polling cycle. Always written."""
         row = {}
         for pid, name in pid_names.items():
@@ -128,6 +129,11 @@ class SessionLogger:
                 row["mil_on"], row["dtc_count"] = (None, None) if val is None else val
             else:
                 row[name] = val
+        gps = gps or {}
+        row["gps_lat"]  = gps.get("lat")
+        row["gps_lng"]  = gps.get("lng")
+        row["gps_sats"] = gps.get("sats")
+        row["gps_fix"]  = gps.get("fix")
         row["packet_hex"] = packet_hex
         self._write("decoded", row)
 
