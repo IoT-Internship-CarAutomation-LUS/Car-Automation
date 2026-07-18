@@ -41,7 +41,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from sensing.gps_neo6m_pi import NMEAParser
 
 # ── Configuration ──────────────────────────────────────────────────────────────
-COM_PORT        = "COM15"                     # Outgoing COM port (from Windows Bluetooth Settings)
+COM_PORT        = "/dev/rfcomm0"                     # Outgoing COM port (from Windows Bluetooth Settings)
 BAUD_RATE       = 38400                      # Try 9600 if responses are garbled
 READ_TIMEOUT    = 2.0                        # seconds to wait per PID response (Change 5)
 POLL_INTERVAL   = 1.0                        # seconds between full polling cycles
