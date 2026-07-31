@@ -35,7 +35,7 @@ from obd_decoder import decode_pid, decode_atrv, pack_packet, unpack_packet, TAR
 from session_logger import SessionLogger
 
 # ── Configuration ──────────────────────────────────────────────────────────────
-COM_PORT        = "COM15"                     # Outgoing COM port (from Windows Bluetooth Settings)
+COM_PORT        = "/dev/rfcomm0"                     # Outgoing COM port (from Windows Bluetooth Settings)
 BAUD_RATE       = 38400                      # Try 9600 if responses are garbled
 READ_TIMEOUT    = 2.0                        # seconds to wait per PID response (Change 5)
 POLL_INTERVAL   = 1.0                        # seconds between full polling cycles
@@ -508,7 +508,15 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
                         # Reconnect if socket is closed or not yet opened
                         if ws_client is None:
                             try:
-                                ws_client = ws_connect(BACKEND_WS_URL, open_timeout=1.5, close_timeout=1.0)
+                                ws_client = ws_connect(
+                                    BACKEND_WS_URL, 
+                                    open_timeout=1.5, 
+                                    close_timeout=1.0,
+                                    additional_headers={
+                                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+                                        "Origin": "https://api.nalusa.space"
+                                    }
+                                )
                                 print(f"[WS] Connected to {BACKEND_WS_URL}")
                                 log.log_stream("connected", BACKEND_WS_URL)
                             except Exception as e:
