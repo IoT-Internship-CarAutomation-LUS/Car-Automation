@@ -24,6 +24,15 @@
 
 import json
 import socket
+
+# --- FORCE IPv4 TO BYPASS BROKEN IPv6 ROUTING ---
+# Resolves timeouts when connecting to Cloudflare via mobile hotspots
+old_getaddrinfo = socket.getaddrinfo
+def force_ipv4(*args, **kwargs):
+    return [r for r in old_getaddrinfo(*args, **kwargs) if r[0] == socket.AF_INET]
+socket.getaddrinfo = force_ipv4
+# -------------------------------------------------
+
 import sys
 import threading
 import time
