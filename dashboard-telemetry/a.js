@@ -128,7 +128,7 @@ function initializeGpsMap() {
     const positionIndicator = L.divIcon({ 
         html: '<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg animate-pulse"></div>' 
     });
-    markerInstance = L.marker([0, 0], { icon: positionIndicator }).addTo(mapInstance);
+    markerInstance = L.marker([0, 0], { icon: positionIndicator }); // Don't add to map initially on boot
 
     // Breadcrumb trail: grows as fixes arrive, capped at MAX_TRAIL_POINTS
     // so a long drive doesn't unbounded-grow the DOM/memory.
@@ -302,6 +302,20 @@ function applyTelemetryPacket(dataPacket) {
         lastUpdateEl.innerText = new Date(packetTs).toLocaleTimeString();
     }
 
+    const badgeCrc = document.getElementById('badge-crc');
+    if (badgeCrc) {
+        if (dataPacket.crc_valid === true) {
+            badgeCrc.innerText = 'CRC OK';
+            badgeCrc.className = 'px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400';
+        } else if (dataPacket.crc_valid === false) {
+            badgeCrc.innerText = 'CRC ERR';
+            badgeCrc.className = 'px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 animate-pulse';
+        } else {
+            badgeCrc.innerText = 'CRC ?';
+            badgeCrc.className = 'px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400';
+        }
+    }
+
     if (dataPacket.vehicle) {
         lastSeenTs.vehicle = packetTs;
         applyVehicleData(dataPacket.vehicle);
@@ -375,11 +389,11 @@ function applyVehicleData(vehicle) {
         document.getElementById('txt-fuel').innerHTML = `${fmt(vehicle.fuel_mileage_kmpl, 1)} <span class="text-xs text-slate-500">km/L</span>`;
     }
     if (vehicle.fuel_level_pct !== undefined) {
-        document.getElementById('txt-fuel-level').innerText = `${fmt(vehicle.fuel_level_pct, 0)}%`;
+        document.getElementById('txt-fuel-level').innerText = vehicle.fuel_level_pct === null ? 'N/A' : `${fmt(vehicle.fuel_level_pct, 0)}%`;
 
         const fuelBadge = document.getElementById('badge-fuel-alert');
         if (vehicle.fuel_level_pct === null) {
-            fuelBadge.innerText = '--';
+            fuelBadge.innerText = 'N/A';
             fuelBadge.className = 'px-2.5 py-1 text-[10px] font-bold rounded-full bg-slate-800 text-slate-500 border border-slate-700';
         } else if (vehicle.fuel_level_pct <= FUEL_CRITICAL_PCT) {
             fuelBadge.innerText = 'CRITICAL';
@@ -402,7 +416,7 @@ function applyVehicleData(vehicle) {
             txtClutch.className = 'text-sm font-mono font-semibold text-slate-300';
         } else {
             // null = not found on the CAN bus yet -- must not read as "released"
-            txtClutch.innerText = '--';
+            txtClutch.innerText = 'UNKNOWN';
             txtClutch.className = 'text-sm font-mono font-semibold text-slate-500';
         }
     }
@@ -421,7 +435,9 @@ function applyVehicleData(vehicle) {
             elementBrakeTxt.innerText = "OFF";
             elementBrakeTxt.className = "text-xs font-bold text-slate-500";
         } else {
-            elementBrakeTxt.innerText = "--";
+            elementBrakeCard.className = "dash-card p-5 transition-colors";
+            elementBrakeTxt.innerText = "UNKNOWN";
+            elementBrakeTxt.className = "text-xs font-bold text-slate-500";
         }
     }
 
@@ -435,36 +451,35 @@ function applyVehicleData(vehicle) {
             badgeAc.className = "px-2.5 py-1 text-xs font-bold rounded-full bg-slate-800 text-slate-500 border border-slate-700";
             badgeAc.innerText = "OFF";
         } else {
-            badgeAc.innerText = "--";
+            badgeAc.className = "px-2.5 py-1 text-xs font-bold rounded-full bg-slate-800 text-slate-500 border border-slate-700";
+            badgeAc.innerText = "UNKNOWN";
         }
     }
 
     // 4. Engine health panel
     if (vehicle.coolant_c !== undefined) {
-        document.getElementById('txt-coolant').innerHTML = `${fmt(vehicle.coolant_c, 0)} &deg;C`;
+        document.getElementById('txt-coolant').innerHTML = vehicle.coolant_c === null ? 'N/A' : `${fmt(vehicle.coolant_c, 0)} &deg;C`;
     }
     if (vehicle.intake_temp_c !== undefined) {
-        document.getElementById('txt-intake').innerHTML = `${fmt(vehicle.intake_temp_c, 0)} &deg;C`;
+        document.getElementById('txt-intake').innerHTML = vehicle.intake_temp_c === null ? 'N/A' : `${fmt(vehicle.intake_temp_c, 0)} &deg;C`;
     }
     if (vehicle.throttle_pct !== undefined) {
-        document.getElementById('txt-throttle').innerText = `${fmt(vehicle.throttle_pct, 0)}%`;
+        document.getElementById('txt-throttle').innerText = vehicle.throttle_pct === null ? 'N/A' : `${fmt(vehicle.throttle_pct, 0)}%`;
     }
     if (vehicle.engine_load_pct !== undefined) {
-        document.getElementById('txt-load').innerText = `${fmt(vehicle.engine_load_pct, 0)}%`;
+        document.getElementById('txt-load').innerText = vehicle.engine_load_pct === null ? 'N/A' : `${fmt(vehicle.engine_load_pct, 0)}%`;
     }
     if (vehicle.maf_gps !== undefined) {
-        document.getElementById('txt-maf').innerText = `${fmt(vehicle.maf_gps, 1)} g/s`;
+        document.getElementById('txt-maf').innerText = vehicle.maf_gps === null ? 'N/A' : `${fmt(vehicle.maf_gps, 1)} g/s`;
     }
     if (vehicle.battery_v !== undefined) {
-        document.getElementById('txt-battery').innerText = (vehicle.battery_v === null)
-            ? '--.- V'
-            : `${Number(vehicle.battery_v).toFixed(1)} V`;
+        document.getElementById('txt-battery').innerText = vehicle.battery_v === null ? 'N/A' : `${Number(vehicle.battery_v).toFixed(1)} V`;
     }
     if (vehicle.ambient_temp_c !== undefined) {
-        document.getElementById('txt-ambient').innerHTML = `${fmt(vehicle.ambient_temp_c, 0)} &deg;C`;
+        document.getElementById('txt-ambient').innerHTML = vehicle.ambient_temp_c === null ? 'N/A' : `${fmt(vehicle.ambient_temp_c, 0)} &deg;C`;
     }
     if (vehicle.map_kpa !== undefined) {
-        document.getElementById('txt-map').innerText = `${fmt(vehicle.map_kpa, 0)} kPa`;
+        document.getElementById('txt-map').innerText = vehicle.map_kpa === null ? 'N/A' : `${fmt(vehicle.map_kpa, 0)} kPa`;
     }
     if (vehicle.mil_on !== undefined) {
         const badgeMil = document.getElementById('badge-mil');
@@ -576,9 +591,15 @@ function applyGpsData(gps) {
     if (hasFix) {
         fixLabel.innerText = 'FIX OK';
         fixLabel.className = 'text-emerald-400';
+        if (!mapInstance.hasLayer(markerInstance)) {
+            markerInstance.addTo(mapInstance);
+        }
     } else {
         fixLabel.innerText = 'NO FIX';
         fixLabel.className = 'text-rose-500';
+        if (mapInstance.hasLayer(markerInstance)) {
+            markerInstance.remove();
+        }
     }
 
     if (!hasFix) return; // Don't move the marker or extend the trail on a bad/absent fix
