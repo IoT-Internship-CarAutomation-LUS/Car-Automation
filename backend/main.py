@@ -43,6 +43,13 @@ def on_startup():
 app.include_router(router)            # REST API at /api/...
 app.add_api_websocket_route("/ws", websocket_endpoint)  # WebSocket at /ws
 
+# Fleet demo dashboard (static files, demo/fleet-dashboard/) at /fleet/
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+_FLEET_DIR = Path(__file__).resolve().parent.parent / "demo" / "fleet-dashboard"
+if _FLEET_DIR.is_dir():
+    app.mount("/fleet", StaticFiles(directory=_FLEET_DIR, html=True), name="fleet")
+
 # ── Run ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

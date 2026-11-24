@@ -32,7 +32,7 @@ Building a fleet telemetry dashboard in `demo/` on branch `demo/fleet-dashboard`
 - `brake` / `clutch` / `ac_on` = `null` means UNKNOWN, not off.
 - Every simulated message must go through `obd_decoder.pack_packet` / `unpack_packet`.
 - Any schema change bumps the version in `docs/MESSAGE_SCHEMA.md`, `backend/config.py` and
-  `backend/obd_decoder.py` together (currently v2.0.0).
+  `backend/obd_decoder.py` together (currently v2.1.0).
 - Label demo data honestly: **measured** / **simulated** / **not supported**.
 - Refer to company leadership by role only in documents, never by name.
 - `python backend/tests/dry_run.py` must keep passing (74 checks).

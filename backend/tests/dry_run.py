@@ -280,7 +280,7 @@ def run_stream_test(cycles=65, watchdog_s=180):
         print("\nLatest telemetry stored by the real backend:")
         print(json.dumps(latest, indent=2))
 
-        check("[--stream] schema_version is '2.0.0'", latest.get("schema_version") == "2.0.0")
+        check(f"[--stream] schema_version is '{obd_decoder.SCHEMA_VERSION}'", latest.get("schema_version") == obd_decoder.SCHEMA_VERSION)
         tyres = latest.get("tyres", {})
         leaf_ok = all(
             isinstance(tyres.get(k), dict)

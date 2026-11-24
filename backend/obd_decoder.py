@@ -1,5 +1,5 @@
 # obd_decoder.py -- LUS Car Automation
-# Schema v2.0.0
+# Schema v2.1.0 (32-byte layout unchanged since v2.0.0)
 #
 # Turns raw OBD-II hex responses into decoded values, packs them into the
 # 32-byte binary packet, and unpacks them back to JSON.
@@ -83,7 +83,7 @@ def calculate_gear(rpm: float, speed_kmh: float, *args, **kwargs) -> int:
     return closest_gear
 
 
-SCHEMA_VERSION = "2.0.0"
+SCHEMA_VERSION = "2.1.0"
 
 # -- Sentinels: what "unavailable" looks like on the wire ----------------------
 U8_NA  = 0xFF

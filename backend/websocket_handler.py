@@ -3,7 +3,8 @@
 # One /ws endpoint for everyone: hardware, dashboards, mock senders.
 #
 # Message routing:
-#   telemetry → save to DB + fan-out to all other clients
+#   telemetry    → save to DB + fan-out to all other clients
+#   demo_control → fan-out only, NOT saved (v2.1.0, fleet demo presenter panel)
 
 import json
 from fastapi import WebSocket, WebSocketDisconnect
@@ -43,16 +44,25 @@ async def websocket_endpoint(websocket: WebSocket):
             # ── Route by message type ──────────────────────────────────────
             if msg_type == "telemetry":
                 vehicle = message.get("vehicle")
-                if isinstance(vehicle, dict):
-                    # Automatically estimate/inject gear if missing or 0 while moving
-                    if not vehicle.get("gear") and vehicle.get("speed_kmh", 0) >= 3:
-                        vehicle["gear"] = calculate_gear(
-                            vehicle.get("rpm", 0),
-                            vehicle.get("speed_kmh", 0)
-                        )
+                source = message.get("source")
+                is_ev = isinstance(source, dict) and source.get("powertrain") == "ev"
+                if isinstance(vehicle, dict) and not is_ev:
+                    # Automatically estimate/inject gear if missing or 0 while moving.
+                    # v2.1.0: never for EVs (single-speed, no gearbox to estimate), and
+                    # a null speed/rpm is "unavailable", so it cannot drive an estimate.
+                    speed = vehicle.get("speed_kmh")
+                    rpm = vehicle.get("rpm")
+                    if not vehicle.get("gear") and speed is not None and rpm is not None and speed >= 3:
+                        vehicle["gear"] = calculate_gear(rpm, speed)
                         raw = json.dumps(message)
 
                 save_telemetry(ts, message)
+                await fan_out(raw, sender=websocket)
+
+            elif msg_type == "demo_control":
+                # v2.1.0: presenter scenario from the fleet dashboard to the simulator.
+                # Relayed to every other client, never saved -- it is not telemetry.
+                print(f"[WS] demo_control '{message.get('scenario')}' target={message.get('target')} -- relaying")
                 await fan_out(raw, sender=websocket)
 
             else:
@@ -67,7 +77,10 @@ async def fan_out(raw_message: str, sender: WebSocket):
     """Send a message to every connected client except the sender."""
     dead_clients = set()
 
-    for client in connected_clients:
+    # Iterate over a snapshot: another client can connect or disconnect while
+    # this coroutine is suspended in send_text(), which would otherwise raise
+    # "Set changed size during iteration" and drop the sender's connection.
+    for client in list(connected_clients):
         if client is sender:
             continue
         try:

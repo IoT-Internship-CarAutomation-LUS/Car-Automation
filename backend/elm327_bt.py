@@ -54,7 +54,7 @@ TCP_PORT        = 9000                       # Bench-test raw packet port (--tcp
 # CWD, not the script, so running from the repo root vs. from backend/
 # would silently split one car session's data across two directories.
 LOG_DIR         = str(Path(__file__).resolve().parent.parent / "logs")
-SCHEMA_VERSION  = "2.0.0"
+SCHEMA_VERSION  = "2.1.0"   # keep in step with obd_decoder.SCHEMA_VERSION
 
 # Target PIDs to poll each cycle -- imported from obd_decoder.py, the source
 # of truth for the wire format. Eleven PIDs now, up from eight.
@@ -528,8 +528,27 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
                                 "rl": {"pressure_kpa": None, "temp_c": None},
                                 "rr": {"pressure_kpa": None, "temp_c": None},
                             },
-                            "gps":            unpacked["gps"],
+                            "gps":            {**unpacked["gps"], "heading_deg": None},
                             "device":         unpacked["device"],
+                            # v2.1.0 additive fields -- null leaves where the Pi has no sensor
+                            "source": {
+                                "vehicle_id": "fronx", "name": "Maruti Suzuki Fronx",
+                                "model_year": 2024, "reg_no": None,
+                                "powertrain": "petrol", "data_mode": "live",
+                            },
+                            "packet_hex":     packet_hex,
+                            "tpms_hex":       None,
+                            "crc_valid":      unpacked["crc_valid"],
+                            "tpms_crc_valid": None,
+                            "cabin":          {"temp_c": None, "humidity_pct": None},
+                            "gsm":            {"rssi_dbm": None},
+                            "ev":             {"soc_pct": None, "range_km": None},
+                            "provenance": {
+                                "vehicle": "measured", "tyres": "not_supported",
+                                "gps": "measured" if unpacked["gps"]["fix"] else "not_supported",
+                                "cabin": "not_supported", "gsm": "not_supported",
+                                "ev": "not_applicable",
+                            },
                         }
                         # Reconnect if socket is closed or not yet opened
                         if ws_client is None:

@@ -4,7 +4,7 @@
 HOST = "0.0.0.0"       # 0.0.0.0 = accessible on the network, not just localhost
 PORT = 8000
 DB_PATH = "telemetry.db"
-SCHEMA_VERSION = "2.0.0"
+SCHEMA_VERSION = "2.1.0"
 
 # -- Gear Estimation Ratio Thresholds (RPM / speed_kmh) ------------------------
 # Used by obd_decoder.calculate_gear(rpm, speed_kmh) to assume transmission gear.

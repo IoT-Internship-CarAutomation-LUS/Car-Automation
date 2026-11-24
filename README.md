@@ -54,7 +54,7 @@ Legend: 🟢 done / working · 🟡 in progress · 🔴 blocked · ⚪ not start
 
 Backend hosting on the company cloud (managed API endpoint + cloud RDBMS instead of self-hosted SQLite) is an open future item — see `backend/README.md`.
 
-Data travels as a **compact 32-byte binary packet** on the hardware link, and is unpacked into **JSON** once at the Pi/backend boundary. Dashboards only ever see JSON. A companion 16-byte tyre packet was designed but never wired to hardware (TPMS sensors were never bought). See [`docs/MESSAGE_SCHEMA.md`](docs/MESSAGE_SCHEMA.md) (currently **v2.0.0**) — the single source of truth for the data format.
+Data travels as a **compact 32-byte binary packet** on the hardware link, and is unpacked into **JSON** once at the Pi/backend boundary. Dashboards only ever see JSON. A companion 16-byte tyre packet was designed but never wired to hardware (TPMS sensors were never bought). See [`docs/MESSAGE_SCHEMA.md`](docs/MESSAGE_SCHEMA.md) (currently **v2.1.0**) — the single source of truth for the data format.
 
 ---
 
