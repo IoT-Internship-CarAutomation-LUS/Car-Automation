@@ -13,6 +13,7 @@
     if (!assigned[id]) assigned[id] = spare.length ? spare.shift() : 0;
     return assigned[id];
   };
+  FT.freeSlot = (id) => { const s = assigned[id]; if (s) { delete assigned[id]; spare.unshift(s); } };
   FT.carColor = (id) => `var(--s${FT.slotFor(id)})`;
   FT.ORDER = ["fronx", "corolla", "veyron", "omni", "roadster"];
 

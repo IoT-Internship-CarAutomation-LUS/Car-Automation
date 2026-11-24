@@ -15,7 +15,7 @@
   function scales(msg) {
     const id = msg.source.vehicle_id, ev = msg.source.powertrain === "ev";
     const rpm = { fronx: [7000, 6000], corolla: [7000, 6200], veyron: [7000, 6400], omni: [6000, 5000], roadster: [14000, 13000] }[id]
-      || (ev ? [16000, 14000] : [8000, 6500]);
+      || (ev ? [16000, 14000] : [7000, 6000]);
     const spd = { veyron: 420, omni: 140, roadster: 250 }[id] || 200;
     return { rpmMax: rpm[0], rpmRed: rpm[1], spdMax: spd };
   }
@@ -35,7 +35,7 @@
       const [x1, y1] = polar(a, R - 9), [x2, y2] = polar(a, R - 15), [lx, ly] = polar(a, R - 24);
       const val = (max * i) / ticks;
       t += `<line class="g-tick" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
-      t += `<text class="g-tick-label" x="${lx}" y="${ly + 4}">${max >= 1000 ? (val ? val / 1000 + "k" : "0") : Math.round(val)}</text>`;
+      t += `<text class="g-tick-label" x="${lx}" y="${ly + 4}">${max >= 1000 ? (val ? +(val / 1000).toFixed(1) + "k" : "0") : Math.round(val)}</text>`;
     }
     let lim = "";
     if (limit && limit < max) {
@@ -384,6 +384,8 @@
     if (built !== car.id + ":" + msg.source.powertrain) build(car);
     const v = msg.vehicle, src = msg.source, ev = src.powertrain === "ev";
 
+    renderDriver(msg);
+
     // header
     $("car-glyph").style.setProperty("--car", FT.carColor(car.id));
     $("car-name").textContent = src.name;
@@ -417,7 +419,7 @@
       if (!node) continue;
       const [val, state] = tileValue(msg, k);
       let opts = {};
-      if (k === "gear" && val != null) opts.text = val === 0 ? "N" : String(val);
+      if (k === "gear" && val != null) opts.text = val === 0 ? "N" : val === 14 ? "R" : String(val);
       if (k === "mil_on" && val != null) { opts.text = val ? "ON" : "OFF"; opts.alert = val; }
       if (k === "dtc_count" && val != null) opts.alert = val > 0;
       if (k === "coolant_c" && val != null) opts.alert = val > 105;
@@ -513,6 +515,36 @@
     $("trend-spd-now").textContent = v.speed_kmh == null ? FT.nullText(ps, msg) : (v.speed_kmh >= 254 ? "254+" : v.speed_kmh);
 
     tick();
+  }
+
+  /* v2.2.0: Driver inputs -- only for a car driven live from the Control Console */
+  function renderDriver(msg) {
+    const panel = $("driver-panel");
+    const on = FT.isLiveCar(msg) && msg.driver;
+    panel.hidden = !on;
+    if (!on) return;
+    const d = msg.driver, v = msg.vehicle;
+    const bar = (k, pct) => {
+      const el = panel.querySelector(`[data-k="${k}"]`);
+      const p = pct == null ? 0 : Math.max(0, Math.min(100, pct));
+      el.querySelector(".din-fill").style.height = p + "%";
+      el.querySelector(".din-val").textContent = pct == null ? "--" : Math.round(p) + "%";
+      el.classList.toggle("is-on", p > 2);
+    };
+    bar("throttle", d.throttle_pedal_pct);
+    bar("brake", d.brake_pedal_pct);
+    bar("clutch", d.clutch_pedal_pct);
+    const g = v.gear;
+    $("din-gear").textContent = g == null ? "--" : g === 0 ? "N" : g === 14 ? "R" : String(g);
+    $("din-trans").textContent = d.transmission === "automatic" ? "Automatic" : d.transmission === "manual" ? "Manual" : "--";
+    const tri = (el, val, onWord, offWord) => {
+      el.dataset.v = val == null ? "unknown" : val ? "on" : "off";
+      el.textContent = val == null ? "UNKNOWN" : val ? onWord : offWord;
+    };
+    tri($("din-ign"), d.ignition, "ON", "OFF");
+    tri($("din-brake"), v.brake, "ON", "OFF");
+    tri($("din-clutch"), v.clutch, "PRESSED", "UP");
+    $("din-estop").hidden = d.estop !== true;
   }
 
   function waiting() {

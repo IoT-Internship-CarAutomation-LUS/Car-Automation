@@ -165,36 +165,44 @@ button { font: inherit; color: inherit; }
 .vlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .vlist > li + li { border-top: 1px solid var(--line); }
 .vcard {
-  display: grid; grid-template-columns: 1.1rem minmax(0, 1fr) auto; column-gap: 0.55rem; row-gap: 0.2rem;
-  width: 100%; text-align: left; padding: 0.55rem 0.9rem 0.6rem 0.8rem;
+  /* Compact row: six cars fit without scrolling at 1920x1080 and 1536x864 (browser chrome included). */
+  display: grid; grid-template-columns: 1.1rem minmax(0, 1fr) auto; column-gap: 0.55rem; row-gap: 0.18rem;
+  width: 100%; text-align: left; padding: 0.5rem 0.9rem 0.55rem 0.8rem;
   background: var(--surface); border: 0; border-radius: 0; cursor: pointer;
   transition: background-color 160ms ease;
 }
 .vcard:hover { background: var(--surface-2); }
 .vcard[aria-current="true"] { background: var(--accent-soft); }
 .vcard:focus-visible { outline-offset: -3px; }
-@media (min-width: 1700px) {
-  .vcard { padding: 0.85rem 1rem 0.9rem 0.9rem; row-gap: 0.3rem; }
-  .vcard-speed { font-size: 1.6rem; }
-  .vcard .ribbon { height: 0.75rem; }
-}
 .car-glyph { width: 1.1rem; height: 1.8rem; flex: none; }
-.car-glyph .cg-body { fill: var(--car); }
-.car-glyph .cg-glass { fill: rgba(255, 255, 255, 0.78); }
-.vcard .car-glyph { grid-row: 1 / span 2; align-self: start; margin-top: 0.1rem; }
+.vcard .car-glyph { grid-row: 1 / span 2; grid-column: 1; align-self: start; margin-top: 0.1rem; }
+.vcard-row { display: flex; align-items: center; gap: 0.45rem; min-width: 0; }
+.vcard-row.r1 { grid-column: 2; grid-row: 1; }
+.vcard-row.r2 { grid-column: 2; grid-row: 2; }
 .vcard-name { font-weight: 650; font-size: 1rem; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.vcard-row { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
-.vcard-row.r2 { grid-column: 2 / span 2; justify-content: space-between; }
-.vcard-row.r3 { grid-column: 2 / span 2; align-items: baseline; }
-.vcard-speed { font-size: 1.35rem; font-weight: 600; line-height: 1.1; }
-.vcard-unit { font-size: 0.86rem; color: var(--ink-3); }
-.vcard-rpm { font-size: 0.93rem; color: var(--ink-2); white-space: nowrap; margin-left: 0.35rem; }
+.vcard-mode { flex: none; display: inline-flex; }
+.vcard-speedbox { grid-column: 3; grid-row: 1; justify-self: end; display: flex; align-items: baseline; gap: 0.25rem; white-space: nowrap; }
+.vcard-speed { font-size: 1.3rem; font-weight: 600; line-height: 1.1; }
+.vcard-unit { font-size: 0.8rem; color: var(--ink-3); }
+.vcard-rpm { grid-column: 3; grid-row: 2; justify-self: end; font-size: 0.86rem; color: var(--ink-2); white-space: nowrap; }
+.vcard-live { grid-column: 2 / span 2; font-size: 0.8rem; font-weight: 550; color: var(--good-ink); }
 .vcard-alerts { grid-column: 2 / span 2; display: flex; gap: 0.25rem; flex-wrap: wrap; }
-.vcard-wire { grid-column: 2 / span 2; display: flex; align-items: center; gap: 0.5rem; margin-top: 0.15rem; }
+.vcard-wire { grid-column: 2 / span 2; display: flex; align-items: center; gap: 0.5rem; margin-top: 0.1rem; }
 .vcard-ribbon { flex: 1; min-width: 0; }
 .vcard-ribbon-note { font-size: 0.78rem; color: var(--ink-3); font-family: var(--font-num); white-space: nowrap; }
 .vcard.is-offline .vcard-speed, .vcard.is-offline .vcard-rpm { color: var(--ink-3); }
 .vcard.is-empty .vcard-speed { color: var(--ink-3); }
+
+/* The space under the list carries the ribbon key instead of sitting empty. */
+.vscroll { display: flex; flex-direction: column; }
+.vlist-foot { margin-top: auto; padding: 0.75rem 1rem 0.85rem; border-top: 1px solid var(--line); background: var(--surface-2); }
+.vf-title { font-size: 0.86rem; font-weight: 650; color: var(--ink-2); }
+.vlist-foot p { margin: 0.2rem 0 0.5rem; font-size: 0.82rem; color: var(--ink-3); line-height: 1.4; }
+.vf-key { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.25rem 0.75rem; font-size: 0.82rem; color: var(--ink-2); }
+.vf-key span { display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
+.vf-key i { width: 0.9rem; height: 0.55rem; border-radius: 2px; background: var(--c); flex: none; }
+.vf-key i.na { background: var(--hatch), var(--surface-3); }
+@media (max-height: 820px) { .vlist-foot p { display: none; } }
 
 .plate {
   display: inline-flex; align-items: center; height: 1.3rem; padding: 0 0.4rem; border-radius: 4px;
@@ -250,6 +258,17 @@ button { font: inherit; color: inherit; }
 .map-legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
 .map-legend .car-glyph { width: 0.7rem; height: 1.1rem; }
 .leaflet-container { font-family: var(--font-ui); background: var(--surface-2); }
+/* Tile seams: Leaflet 1.9 blends tiles with plus-lighter, which brightens the hairline overlap
+   at fractional device-pixel ratios (125% Windows scaling) into faint light lines. Overlap the
+   tiles by half a pixel with normal blending instead; zoom is whole-number only. */
+.leaflet-container img.leaflet-tile { mix-blend-mode: normal; width: 256.5px !important; height: 256.5px !important; }
+.map-fit {
+  display: inline-flex; align-items: center; gap: 0.35rem; height: 2rem; padding: 0 0.65rem;
+  background: var(--surface); color: var(--ink); border: 2px solid rgba(0, 0, 0, 0.2); background-clip: padding-box;
+  border-radius: 6px; font: 600 0.86rem var(--font-ui); cursor: pointer;
+}
+.map-fit:hover { background-color: var(--surface-2); }
+:root[data-theme="dark"] .map-fit { border-color: rgba(255, 255, 255, 0.16); }
 /* OSM fallback tiles, toned to sit quietly under the data (Positron / Dark Matter feel) */
 .tiles-osm { filter: grayscale(1) contrast(0.9) brightness(1.05); }
 :root[data-theme="dark"] .tiles-osm { filter: grayscale(1) invert(1) brightness(0.85) contrast(0.9); }
@@ -481,6 +500,14 @@ button { font: inherit; color: inherit; }
 .p-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.4rem; }
 .p-row select { min-height: 2.4rem; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); padding: 0 0.5rem; font: inherit; }
 .presenter .p-sent { margin-top: 0.6rem; font-size: 0.86rem; color: var(--accent); min-height: 1.2rem; }
+.p-drive { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--line); }
+.p-drive h3 { font-size: 0.93rem; font-weight: 650; margin: 0 0 0.5rem; }
+.p-drive-body { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: 0.75rem; align-items: center; }
+.p-qr { width: 7.5rem; height: 7.5rem; background: #ffffff; border-radius: 6px; padding: 0.2rem; }
+.p-qr svg { width: 100%; height: 100%; display: block; }
+.p-url { font-size: 0.86rem; font-weight: 600; color: var(--accent); word-break: break-all; text-decoration: underline; text-underline-offset: 2px; }
+.p-drive-text p { margin: 0.35rem 0 0; }
+.presenter { max-height: calc(100vh - 2rem); overflow-y: auto; }
 .presenter .p-close { position: absolute; right: 0.6rem; top: 0.55rem; border: 0; background: transparent; cursor: pointer; color: var(--ink-3); padding: 0.3rem; border-radius: 6px; }
 .presenter .p-close:hover { color: var(--ink); background: var(--surface-2); }
 .kbd { font-family: var(--font-num); font-size: 0.8rem; padding: 0 0.3rem; border: 1px solid var(--line-strong); border-radius: 4px; }
@@ -506,3 +533,23 @@ button { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0ms !important; animation-duration: 0ms !important; }
 }
+
+/* ---------- Driver inputs (v2.2.0, Control Console cars) ---------- */
+.driver-panel .panel-head .prov { margin-left: 0.25rem; }
+.din-estop { color: var(--critical-ink); background: var(--critical-soft); border-radius: 6px; padding: 0.15rem 0.5rem; font-weight: 650; font-size: 0.86rem; display: inline-flex; align-items: center; gap: 0.3rem; }
+.din { display: flex; flex-wrap: wrap; gap: 1rem 1.25rem; align-items: flex-end; }
+.din-pedals { display: flex; gap: 1rem; }
+.din-pedal { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; width: 4.2rem; }
+.din-track { position: relative; width: 2.2rem; height: 6.5rem; border-radius: 8px; background: var(--surface-3); overflow: hidden; }
+.din-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: var(--ink-3); transition: height 120ms linear; }
+.din-pedal[data-k="throttle"] .din-fill { background: var(--good); }
+.din-pedal[data-k="brake"] .din-fill { background: var(--critical); }
+.din-pedal[data-k="clutch"] .din-fill { background: var(--s1); }
+.din-name { font-size: 0.86rem; color: var(--ink-2); }
+.din-val { font-size: 1rem; font-weight: 600; }
+.din-facts { display: grid; grid-template-columns: repeat(4, minmax(7.5rem, 10rem)); gap: 0.45rem; align-items: stretch; }
+.din-gearbox, .din-row { padding: 0.5rem 0.6rem; border-radius: 8px; background: var(--surface-2); display: flex; flex-direction: column; gap: 0.25rem; }
+.din-gearbox { min-width: 6rem; }
+.din-gear { font-size: 2.2rem; font-weight: 650; line-height: 1; }
+.din-sub { font-size: 0.82rem; color: var(--ink-3); }
+@media (max-width: 1180px) { .din-facts { grid-template-columns: repeat(2, minmax(7.5rem, 10rem)); } }

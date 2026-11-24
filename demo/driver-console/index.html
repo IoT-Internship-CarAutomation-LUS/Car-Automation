@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Control Console - Driver Simulator</title>
+  <meta name="description" content="Drive a live car into the fleet dashboard: pedals, gears and an emergency stop, packed into the real 32-byte packet.">
+  <meta name="theme-color" content="#0c5a43">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230c5a43'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='white' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='white'/%3E%3C/svg%3E">
+  <script>
+    (function () { try { var t = localStorage.getItem("ft-theme"); if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t); } catch (e) {} })();
+  </script>
+  <link rel="stylesheet" href="../fleet/css/app.css">
+  <link rel="stylesheet" href="css/console.css">
+</head>
+<body class="console-page">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+      <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.2v.3"/></symbol>
+      <symbol id="i-crit" viewBox="0 0 24 24"><path d="M8.2 3h7.6L21 8.2v7.6L15.8 21H8.2L3 15.8V8.2z"/><path d="M12 7.5v5.5M12 16.2v.3"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.7 2.7L16.2 9.5"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8v.3"/></symbol>
+      <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="12" r="3.5"/><path d="M11.5 12H21M17.5 12v3M20.5 12v2.5"/></symbol>
+      <symbol id="i-horn" viewBox="0 0 24 24"><path d="M4 9.5h3l6-4v13l-6-4H4z"/><path d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/></symbol>
+      <symbol id="i-stop" viewBox="0 0 24 24"><path d="M8.2 3h7.6L21 8.2v7.6L15.8 21H8.2L3 15.8V8.2z"/><path d="M8.5 12h7"/></symbol>
+      <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5M6.5 8h11v3a5.5 5.5 0 0 1-11 0zM12 16.5V21"/></symbol>
+    </defs>
+  </svg>
+
+  <header class="shell">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="rgba(255,255,255,0.14)"/><circle cx="16" cy="16" r="9" fill="none" stroke="#fff" stroke-width="2.6"/><circle cx="16" cy="16" r="2.4" fill="#fff"/><path d="M7.5 16h6M18.5 16h6M16 18.5v6" stroke="#fff" stroke-width="2.6"/></svg>
+      <div class="brand-text"><strong>Control Console - Driver Simulator</strong><span>LUS IoT Internship. Joins the fleet as a live car</span></div>
+    </div>
+    <span class="shell-item link" id="link" data-state="down"><span class="link-dot" aria-hidden="true"></span><span class="link-text" id="link-text">Not connected</span></span>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark theme"><svg class="icon"><use href="#i-moon"/></svg><span>Dark</span></button>
+  </header>
+
+  <div class="banner" id="banner" data-tone="neutral" role="status" aria-live="polite">
+    <svg class="icon" id="banner-icon"><use href="#i-info"/></svg><span id="banner-text">Choose a car and press Connect.</span>
+    <span class="banner-fresh" id="fresh" title="Packets leaving this console"><span class="fresh is-na"></span><span id="fresh-text">Not sending</span></span>
+  </div>
+
+  <main class="console">
+    <!-- Setup: before driving -->
+    <section class="panel setup" id="setup" aria-labelledby="setup-h">
+      <div class="panel-head"><h2 id="setup-h">Your car</h2><span class="ph-right sub-note">Each browser tab is its own car</span></div>
+      <div class="setup-grid">
+        <label class="field"><span>Car</span>
+          <select id="car-select">
+            <option value="demo">Live Demo Car (manual, 6-speed)</option>
+            <option value="swift">Maruti Suzuki Swift (manual)</option>
+            <option value="creta">Hyundai Creta (automatic)</option>
+          </select></label>
+        <label class="field"><span>Registration (fake)</span><input id="reg" class="num" maxlength="16" autocomplete="off" spellcheck="false"></label>
+        <label class="field"><span>Powertrain</span><input value="Petrol" disabled></label>
+        <label class="field field-wide"><span>Backend WebSocket</span><input id="ws-url" class="num" autocomplete="off" spellcheck="false"></label>
+        <div class="setup-actions">
+          <span class="vid">Vehicle id <span class="num" id="vid"></span></span>
+          <button class="btn btn-primary" id="connect" type="button"><svg class="icon"><use href="#i-plug"/></svg><span>Connect</span></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Summary once connected -->
+    <section class="panel summary" id="summary" hidden aria-label="Connected car">
+      <span class="summary-name" id="sum-name"></span>
+      <span class="plate" id="sum-plate"></span>
+      <span class="tag tag-live">Live</span>
+      <span class="sub-note">Vehicle id <span class="num" id="sum-vid"></span></span>
+      <button class="btn" id="disconnect" type="button">Disconnect</button>
+    </section>
+
+    <div class="drive" id="drive">
+      <!-- Instruments -->
+      <section class="panel cluster" aria-labelledby="cl-h">
+        <div class="panel-head"><h2 id="cl-h">Instruments</h2><span class="ph-right limiter" id="limiter" hidden>Rev limiter</span></div>
+        <div class="cl-main">
+          <div class="cl-speed"><span class="num" id="r-speed">0</span><span class="cl-unit">km/h</span></div>
+          <div class="cl-gear"><span class="cl-label">Gear</span><span class="num" id="r-gear">N</span></div>
+        </div>
+        <div class="rpm">
+          <div class="rpm-top"><span class="cl-label">Engine speed</span><span><span class="num" id="r-rpm">0</span> rpm</span></div>
+          <div class="rpm-bar" aria-hidden="true"><i id="rpm-fill"></i><b class="rpm-red"></b></div>
+          <div class="rpm-scale num" aria-hidden="true"><span>0</span><span>1k</span><span>2k</span><span>3k</span><span>4k</span><span>5k</span><span>6k</span><span>7k</span></div>
+        </div>
+        <div class="cl-facts">
+          <div class="tile"><span class="tile-label">Coolant</span><span class="tile-value num" id="r-cool">--</span></div>
+          <div class="tile"><span class="tile-label">Fuel</span><span class="tile-value num" id="r-fuel">--</span></div>
+          <div class="tile"><span class="tile-label">Battery</span><span class="tile-value num" id="r-batt">--</span></div>
+        </div>
+      </section>
+
+      <!-- Controls -->
+      <section class="panel controls" aria-labelledby="ct-h">
+        <div class="panel-head"><h2 id="ct-h">Controls</h2><span class="ph-right sub-note keys" id="keys-hint">Keys: W throttle, S brake, Space clutch, Q/E gear, I ignition, X stop, H horn</span></div>
+        <div class="ct-top">
+          <button class="btn ign" id="ign" type="button" aria-pressed="false"><svg class="icon"><use href="#i-key"/></svg><span id="ign-text">Ignition off</span></button>
+          <button class="btn horn" id="horn" type="button"><svg class="icon"><use href="#i-horn"/></svg><span>Horn</span></button>
+          <button class="btn estop" id="estop" type="button"><svg class="icon"><use href="#i-stop"/></svg><span>Emergency stop</span></button>
+        </div>
+        <div class="gearbox" id="gearbox" role="radiogroup" aria-label="Gear lever"></div>
+        <div class="pedals">
+          <div class="pedal" id="p-clutch" data-k="clutch" role="slider" tabindex="0" aria-label="Clutch pedal" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="pedal-track"><div class="pedal-fill"></div><div class="pedal-knob"></div></div><span class="pedal-name">Clutch</span><span class="pedal-val num">0%</span>
+          </div>
+          <div class="pedal" id="p-brake" data-k="brake" role="slider" tabindex="0" aria-label="Brake pedal" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="pedal-track"><div class="pedal-fill"></div><div class="pedal-knob"></div></div><span class="pedal-name">Brake</span><span class="pedal-val num">0%</span>
+          </div>
+          <div class="pedal" id="p-throttle" data-k="throttle" role="slider" tabindex="0" aria-label="Throttle pedal" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="pedal-track"><div class="pedal-fill"></div><div class="pedal-knob"></div></div><span class="pedal-name">Throttle</span><span class="pedal-val num">0%</span>
+          </div>
+        </div>
+        <p class="pedal-help">Drag a pedal down to press it; let go and it springs back.</p>
+      </section>
+
+      <!-- Wire -->
+      <section class="panel wirebox" aria-labelledby="w-h">
+        <div class="panel-head"><h2 id="w-h">On the wire</h2><span class="ph-right sub-note"><span class="num" id="w-sent">0</span> packets sent, <span class="num" id="w-rate">0.0</span>/s, seq <span class="num" id="w-seq">--</span></span></div>
+        <div class="bytes b32" id="w-bytes"></div>
+        <p class="wire-note">The last 32-byte packet this console built with the same packPacket and CRC-8 as the simulator, unpacked and sent as schema JSON.</p>
+      </section>
+    </div>
+  </main>
+
+  <script src="../fleet/js/codec.js"></script>
+  <script src="../fleet/js/ui.js"></script>
+  <script src="js/live-route.js"></script>
+  <script src="js/console.js"></script>
+</body>
+</html>

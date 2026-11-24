@@ -42,6 +42,7 @@
     const id = String(msg.source.vehicle_id);
     const car = carRecord(id);
     const isNew = !car.msg;
+    car.prevRx = car.lastRx;
     car.msg = msg;
     car.lastRx = now;
     car.firstRx = car.firstRx || now;
@@ -90,7 +91,22 @@
     clearAlert(id, "stale");
     clearAlert(id, "offline");
     evaluate(id, msg);
+    if (isNew && FT.isLiveCar(msg)) FT.postInfo(id, `Live car joined: ${msg.source.name}, driven from the Control Console`);
     emit(isNew ? "newcar" : "telemetry", car);
+  };
+
+  /** v2.2.0: a person is driving this car live from the Control Console (/drive/). */
+  FT.isLiveCar = (msg) => !!(msg && msg.source && (msg.source.control === "manual" || msg.source.data_mode === "live"));
+
+  /** v2.2.0: the backend says a live car's socket closed -- post it and remove the car. */
+  FT.removeCar = function (id, name) {
+    const car = S.cars[id];
+    const label = (car && car.msg && car.msg.source.name) || name || id;
+    FT.postInfo(null, `Live car left: ${label}`, "Control Console");
+    for (const k of [...S.active.keys()]) if (S.active.get(k).car === id) S.active.delete(k);
+    delete S.cars[id];
+    emit("removed", id);
+    emit("alerts");
   };
 
   /* ---------------- alerts ---------------- */
@@ -133,10 +149,10 @@
   function clearedText(rule) {
     if (rule.startsWith("tp-")) return `${FT.POS_NAME[rule.slice(3)]} tyre pressure back above 185 kPa`;
     if (rule.startsWith("tt-")) return `${FT.POS_NAME[rule.slice(3)]} tyre cooled below 88 °C`;
-    return ({ coolant: "Coolant back below 103 °C", speed: "Speed back under 115 km/h", battery: "Battery back above 12.2 V",
+    return ({ estop: "Emergency stop released", coolant: "Coolant back below 103 °C", speed: "Speed back under 115 km/h", battery: "Battery back above 12.2 V",
       mil: "Check-engine lamp off, no fault codes", stale: "Packets arriving again", offline: "Back online, packets arriving" })[rule] || "Back to normal";
   }
-  FT.postInfo = (car, text) => post({ id: "info:" + Date.now(), t: Date.now(), car, sev: "info", msg: text, kind: "info" });
+  FT.postInfo = (car, text, name) => post({ id: "info:" + Date.now() + Math.random(), t: Date.now(), car, name, sev: "info", msg: text, kind: "info" });
 
   /** hysteresis rule: on when test(), off when clear() */
   function rule(car, name, on, off, sev, text, short) {
@@ -165,6 +181,9 @@
       s >= 254 ? `Speed at the OBD limit (254 km/h shown, real speed may be higher)` : `Speed ${s} km/h, above 120 km/h`, "Speed");
     const b = v.battery_v;
     rule(id, "battery", b != null && b < 12.0, b == null || b > 12.2, "warning", `Battery ${b} V, below 12.0 V`, "Battery");
+    const d = msg.driver || {};
+    rule(id, "estop", d.estop === true, d.estop !== true, "critical",
+      "Emergency stop pressed on the Control Console", "E-stop");
     const milOn = v.mil_on === true || (v.dtc_count != null && v.dtc_count > 0);
     rule(id, "mil", milOn, !milOn, "serious",
       `Check-engine lamp ${v.mil_on ? "on" : "off"}, ${v.dtc_count || 0} fault code${v.dtc_count === 1 ? "" : "s"} stored`, "MIL");
@@ -231,6 +250,7 @@
       ws.onmessage = (ev) => {
         let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
         if (m && m.type === "telemetry") FT.ingest(m);
+        else if (m && m.type === "vehicle_left" && m.vehicle_id && S.cars[m.vehicle_id]) FT.removeCar(String(m.vehicle_id), m.name);
       };
       ws.onclose = () => {
         if (S.mode === "standalone") return;

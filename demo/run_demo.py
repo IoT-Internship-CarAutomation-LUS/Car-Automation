@@ -12,6 +12,7 @@
 # any reason, so nothing is left holding port 8000.
 
 import argparse
+import json
 import os
 import signal
 import socket
@@ -195,12 +196,23 @@ def main():
             threading.Thread(target=pump, args=(sim, "sim"), daemon=True).start()
 
         url = f"http://localhost:{args.port}/fleet/"
-        ip = lan_ip()
+        # Same answer the presenter panel's QR code uses (Wi-Fi / hotspot adapter first).
+        ips = []
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{args.port}/api/lan-info", timeout=5) as r:
+                ips = [a["ip"] for a in json.loads(r.read()).get("addresses", [])]
+        except Exception:  # noqa: BLE001
+            ips = [lan_ip()] if lan_ip() else []
         print("")
-        print(f"[demo] Fleet dashboard:  {url}")
-        if ip:
-            print(f"[demo] Other laptops:    http://{ip}:{args.port}/fleet/   (WebSocket ws://{ip}:{args.port}/ws)")
-        print("[demo] Press P in the dashboard for the presenter panel. Ctrl+C here stops everything.")
+        print(f"[demo] Fleet dashboard:   {url}")
+        print(f"[demo] Driver console:    http://localhost:{args.port}/drive/   (this laptop, second window)")
+        for i, ip in enumerate(ips):
+            tag = "phone / 2nd laptop" if i == 0 else "other adapter"
+            print(f"[demo] Driver console:    http://{ip}:{args.port}/drive/   ({tag}, same Wi-Fi or hotspot)")
+        if not ips:
+            print("[demo] No LAN address found: connect to Wi-Fi or a phone hotspot to drive from another device.")
+        print("[demo] Press P in the dashboard for the presenter panel (QR code for the driver console).")
+        print("[demo] Windows Firewall: if asked, allow Python on PRIVATE networks. Ctrl+C here stops everything.")
         print("")
         if not args.no_browser:
             webbrowser.open(url)

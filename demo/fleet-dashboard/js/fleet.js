@@ -45,11 +45,11 @@
     li.innerHTML = `
       <button class="vcard" type="button" style="--car:${FT.carColor(car.id)}">
         ${FT.carGlyph(car.id)}
-        <span class="vcard-row"><span class="vcard-name"></span></span>
-        <span class="vcard-mode"></span>
+        <span class="vcard-row r1"><span class="vcard-name"></span><span class="vcard-mode"></span></span>
+        <span class="vcard-speedbox"><span class="vcard-speed num"></span><span class="vcard-unit">km/h</span></span>
         <span class="vcard-row r2"><span class="plate"></span><span class="status"></span></span>
-        <span class="vcard-row r3"><span class="vcard-speed num"></span><span class="vcard-unit">km/h</span>
-          <span class="vcard-rpm num"></span></span>
+        <span class="vcard-rpm num"></span>
+        <span class="vcard-live" hidden>Driven live from the Control Console</span>
         <span class="vcard-alerts"></span>
         <span class="vcard-wire"><span class="vcard-ribbon ribbon" title="The live 32-byte packet, one cell per byte, coloured by field. Hatched cells carry the 'not available' sentinel."></span><span class="vcard-ribbon-note"></span></span>
       </button>`;
@@ -68,7 +68,7 @@
       plate: btn.querySelector(".plate"), status: btn.querySelector(".status"),
       speed: btn.querySelector(".vcard-speed"), rpm: btn.querySelector(".vcard-rpm"),
       alerts: btn.querySelector(".vcard-alerts"), ribbon: btn.querySelector(".vcard-ribbon"),
-      note: btn.querySelector(".vcard-ribbon-note"), lastHex: null,
+      note: btn.querySelector(".vcard-ribbon-note"), live: btn.querySelector(".vcard-live"), lastHex: null,
     };
     return cardEls[car.id];
   }
@@ -91,6 +91,7 @@
     else e.speed.textContent = v.speed_kmh >= 254 ? "254+" : String(Math.round(v.speed_kmh));
     const motor = src.powertrain === "ev";
     e.rpm.textContent = v.rpm == null ? "" : `${Math.round(v.rpm).toLocaleString("en-IN")} rpm`;
+    if (v.gear === 14) e.rpm.textContent += " R";
     e.rpm.title = motor ? "Motor rpm (electric)" : "Engine rpm";
     const al = FT.alertsFor(car.id);
     const shown = al.slice(0, 2).map((a) =>
@@ -103,6 +104,7 @@
     e.note.textContent = `${rc.have}/${rc.of} fields`;
     e.note.title = `This car reports ${rc.have} of the ${rc.of} vehicle fields; the rest are null (not supported, not applicable or no reading)`;
     e.alerts.hidden = !al.length;
+    e.live.hidden = !FT.isLiveCar(m);
     e.btn.setAttribute("aria-label", `${src.name}, ${FT.STATUS_WORD[st]}, ${v.speed_kmh == null ? "speed unknown" : v.speed_kmh + " km/h"}${al.length ? ", " + al.length + " alerts" : ""}. Open full telemetry.`);
   }
 
@@ -139,33 +141,71 @@
   const markers = {}, trails = {}, routes = {};
 
   function initMap() {
-    map = L.map("fleet-map", { zoomControl: true, attributionControl: true, preferCanvas: false }).setView([12.99, 80.2], 11);
+    // Whole zoom levels only (fractional zoom draws hairline tile seams), never wider than
+    // greater Chennai, and one wheel notch = one zoom level.
+    const CHENNAI = L.latLngBounds([12.55, 79.8], [13.35, 80.55]);
+    map = L.map("fleet-map", {
+      zoomControl: true, attributionControl: true, zoomSnap: 1, zoomDelta: 1,
+      wheelPxPerZoomLevel: 120, wheelDebounceTime: 60, minZoom: 11, maxZoom: 18,
+      maxBounds: CHENNAI, maxBoundsViscosity: 0.85,
+    }).setView([12.97, 80.18], 11);
     tiles = FT.makeTiles(map);
     const data = window.DEMO_DATA && window.DEMO_DATA.routes;
     const bounds = [];
     if (data) {
       for (const [id, r] of Object.entries(data)) {
-        routes[id] = L.polyline(r.coords, { color: FT.cssVar(`--s${FT.slotFor(id)}`), weight: 3, opacity: 0.3, dashArray: "1 7", lineCap: "round", interactive: false }).addTo(map);
+        // "live" is the Control Console loop, shared by every live car: neutral ink, not an identity colour
+        const color = id === "live" ? FT.cssVar("--ink-3") : FT.cssVar(`--s${FT.slotFor(id)}`);
+        routes[id] = L.polyline(r.coords, { color, weight: 3, opacity: 0.3, dashArray: "1 7", lineCap: "round", interactive: false }).addTo(map);
         r.coords.forEach((c) => bounds.push(c));
       }
     }
     FT.fleetBounds = bounds.length ? L.latLngBounds(bounds) : null;
+
+    const FitAll = L.Control.extend({
+      options: { position: "topleft" },
+      onAdd() {
+        const b = L.DomUtil.create("button", "map-fit");
+        b.type = "button";
+        b.title = "Fit every car and route in view";
+        b.innerHTML = `<svg class="icon" aria-hidden="true"><use href="#i-fit"/></svg><span>Fit all</span>`;
+        L.DomEvent.disableClickPropagation(b);
+        L.DomEvent.on(b, "click", () => { autoFit = true; frame(); });
+        return b;
+      },
+    });
+    new FitAll().addTo(map);
+
+    // Frame as soon as (and whenever) the container has a real size, until the user moves the map.
+    const box = document.getElementById("fleet-map");
+    ["wheel", "mousedown", "touchstart", "keydown"].forEach((ev) =>
+      box.addEventListener(ev, (e) => { if (!e.target.closest(".map-fit")) autoFit = false; }, { passive: true }));
+    if (window.ResizeObserver) new ResizeObserver(() => { map.invalidateSize(); if (autoFit) frame(); }).observe(box);
     frame();
     FT.fleetMap = map;
   }
+  let autoFit = true;
+  function fitBoundsAll() {
+    const b = FT.fleetBounds ? L.latLngBounds(FT.fleetBounds.getSouthWest(), FT.fleetBounds.getNorthEast()) : null;
+    let out = b;
+    for (const m of Object.values(markers)) {
+      const ll = m.mk.getLatLng();
+      out = out ? out.extend(ll) : L.latLngBounds(ll, ll);
+    }
+    return out;
+  }
   function frame() {
-    if (!map || !FT.fleetBounds) return;
-    map.fitBounds(FT.fleetBounds, { padding: [28, 28], animate: false });
-    // The coast is the eastern edge of every route: move the spare width to the land side.
-    const east = map.latLngToContainerPoint(FT.fleetBounds.getNorthEast()).x;
-    const w = map.getSize().x;
-    const slack = w - 150 - east;          // keep ~150 px for the car labels east of the coast
-    if (slack > 0) map.panBy([-slack, 0], { animate: false });
+    if (!map) return;
+    const size = map.getSize();
+    if (size.x < 80 || size.y < 80) return;        // hidden or not laid out yet: try again on resize
+    const b = fitBoundsAll();
+    if (!b) return;
+    map.fitBounds(b, { padding: [36, 36], maxZoom: 14, animate: false });
   }
   FT.recolorFleetMap = function () {
     if (!map) return;
     tiles.rebuild();
-    for (const [id, r] of Object.entries(routes)) r.setStyle({ color: FT.cssVar(`--s${FT.slotFor(id)}`) });
+    for (const [id, r] of Object.entries(routes)) r.setStyle({ color: id === "live" ? FT.cssVar("--ink-3") : FT.cssVar(`--s${FT.slotFor(id)}`) });
     for (const [id, t] of Object.entries(trails)) t.setStyle({ color: FT.cssVar(`--s${FT.slotFor(id)}`) });
   };
 
@@ -190,6 +230,7 @@
     const el = m.mk.getElement();
     const cur = m.mk.getLatLng();
     m.from = [cur.lat, cur.lng]; m.to = [g.lat, g.lng]; m.t0 = performance.now();
+    m.dur = car.prevRx ? Math.max(150, Math.min(1000, car.lastRx - car.prevRx)) : 1000;
     if (g.heading_deg != null) {
       const d = ((g.heading_deg - (m.angle % 360)) + 540) % 360 - 180;   // shortest turn
       m.angle += d;
@@ -204,10 +245,10 @@
       el.querySelector(".car-marker").classList.toggle("has-alert", FT.alertsFor(car.id).some((a) => a.sev === "critical"));
     }
     m.trail.push([g.lat, g.lng]);
-    if (m.trail.length > 45) m.trail.shift();
+    while (m.trail.length > 45 * (car.prevRx && car.lastRx - car.prevRx < 600 ? 5 : 1)) m.trail.shift();
     trails[car.id].setLatLngs(m.trail);
   }
-  const shortName = (n) => n.replace(/^(Maruti Suzuki|Maruti|Toyota|Bugatti|Tesla)\s+/, "").replace(/\s+16\.4$/, "");
+  const shortName = (n) => n.replace(/^(Maruti Suzuki|Maruti|Toyota|Bugatti|Tesla|Hyundai)\s+/, "").replace(/\s+16\.4$/, "").replace(/\s*\((manual|automatic)\)$/i, "");
 
   function declutterLabels() {
     // Greedy: place each label right of its car, else left, avoiding labels placed so far and every car body.
@@ -233,7 +274,7 @@
   function animate() {
     const now = performance.now();
     for (const m of Object.values(markers)) {
-      const f = Math.min(1, (now - m.t0) / 1000);
+      const f = Math.min(1, (now - m.t0) / (m.dur || 1000));
       if (f < 1 || m._last !== m.t0) {
         m.mk.setLatLng([m.from[0] + (m.to[0] - m.from[0]) * f, m.from[1] + (m.to[1] - m.from[1]) * f]);
         if (f >= 1) m._last = m.t0;
@@ -262,7 +303,7 @@
     }
     for (const f of frag.reverse()) {
       const car = S.cars[f.car];
-      const name = car && car.msg ? car.msg.source.name : (f.car || "Presenter");
+      const name = f.name || (car && car.msg ? car.msg.source.name : (f.car || "Presenter"));
       const li = document.createElement("li");
       li.dataset.id = f.id;
       li.className = (f.kind === "cleared" ? "is-cleared " : "") + "is-new";
@@ -299,9 +340,18 @@
           if (!Object.keys(S.cars).length) renderEmptyCards();
         }
         if (what === "mode") renderEmptyCards();
+        if (what === "removed") {
+          const id = car;
+          if (cardEls[id]) { cardEls[id].btn.parentElement.remove(); delete cardEls[id]; }
+          if (markers[id]) { markers[id].mk.remove(); delete markers[id]; }
+          if (trails[id]) { trails[id].remove(); delete trails[id]; }
+          FT.freeSlot(id);
+          updateLegend(); updateKpis(); FT.refreshPresenterCars && FT.refreshPresenterCars();
+          if (location.hash === "#car/" + encodeURIComponent(id)) location.hash = "#fleet";
+        }
       });
     },
-    invalidate() { if (map) setTimeout(() => { map.invalidateSize(); }, 0); },
+    invalidate() { if (map) setTimeout(() => { map.invalidateSize(); if (autoFit) frame(); }, 0); },
     reframe: frame,
     setSelected(id) { for (const [k, e] of Object.entries(cardEls)) e.btn.setAttribute("aria-current", k === id ? "true" : "false"); },
   };

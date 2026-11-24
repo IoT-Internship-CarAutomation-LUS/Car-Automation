@@ -1,0 +1,156 @@
+/* Control Console - Driver Simulator. Shares tokens, shell, panels, tiles and bytes with
+   ../fleet/css/app.css; this file only adds what a driving surface needs. */
+
+body.console-page { min-height: 100vh; min-height: 100dvh; }
+
+/* ---------- status banner (the old console's CLEAR / SLOWING / BRAKING strip) ---------- */
+.banner {
+  position: sticky; top: 3.6rem; z-index: 900;
+  display: flex; align-items: center; gap: 0.6rem; min-height: 2.8rem; padding: 0.45rem 1.25rem;
+  font-weight: 600; font-size: 1rem; border-bottom: 1px solid var(--line);
+  background: var(--surface); color: var(--ink-2);
+}
+.banner .icon { width: 1.3rem; height: 1.3rem; }
+.banner[data-tone="info"] { background: var(--accent-soft); color: var(--accent); }
+.banner[data-tone="good"] { background: var(--good-soft); color: var(--good-ink); }
+.banner[data-tone="warning"] { background: var(--warning-soft); color: var(--warning-ink); }
+.banner[data-tone="critical"] { background: var(--critical); color: #ffffff; }
+.banner[data-tone="critical"] .fresh { box-shadow: 0 0 0 2px #fff; }
+.banner-fresh { margin-left: auto; display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.86rem; font-weight: 500; white-space: nowrap; }
+.banner[data-tone="critical"] .banner-fresh { color: #ffffff; }
+
+/* ---------- layout ---------- */
+.console { padding: var(--gap); display: flex; flex-direction: column; gap: var(--gap); max-width: 1500px; margin: 0 auto; }
+.drive { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); grid-template-areas: "cluster controls" "wire controls"; grid-template-rows: auto 1fr; gap: var(--gap); align-items: start; }
+.drive .cluster { grid-area: cluster; }
+.drive .controls { grid-area: controls; }
+.drive .wirebox { grid-area: wire; }
+.wirebox .bytes { grid-template-columns: repeat(16, minmax(0, 1fr)); }
+.drive.is-off .controls, .drive.is-off .cluster { opacity: 0.55; pointer-events: none; }
+.sub-note { font-size: 0.86rem; color: var(--ink-3); font-weight: 400; }
+
+/* ---------- setup ---------- */
+.setup-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem 1rem; align-items: end; }
+.field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.86rem; color: var(--ink-2); min-width: 0; }
+.field-wide { grid-column: 1 / span 2; }
+.field input, .field select {
+  height: 2.6rem; padding: 0 0.7rem; border-radius: 8px; border: 1px solid var(--line-strong);
+  background: var(--surface); color: var(--ink); font: 500 1rem var(--font-ui); min-width: 0;
+}
+.field input.num { font-family: var(--font-num); }
+.field input:disabled { background: var(--surface-2); color: var(--ink-3); }
+.setup-actions { display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; }
+.vid { font-size: 0.86rem; color: var(--ink-3); white-space: nowrap; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem;
+  min-height: 2.6rem; padding: 0 1rem; border-radius: 8px; border: 1px solid var(--line-strong);
+  background: var(--surface); color: var(--ink); font: 600 1rem var(--font-ui); cursor: pointer;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+}
+.btn:hover { background: var(--surface-2); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary { background: var(--shell); border-color: var(--shell); color: #ffffff; }
+.btn-primary:hover { background: var(--shell-2); }
+
+.summary { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; padding: 0.6rem 1rem; }
+.summary-name { font-weight: 650; font-size: 1.07rem; }
+.summary .btn { margin-left: auto; min-height: 2.2rem; }
+
+/* ---------- instruments ---------- */
+.cl-main { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; }
+.cl-speed .num { font-size: 4.2rem; font-weight: 600; line-height: 0.95; letter-spacing: -0.02em; }
+.cl-unit { margin-left: 0.4rem; font-size: 1rem; color: var(--ink-3); }
+.cl-gear { display: flex; flex-direction: column; align-items: center; min-width: 4.6rem; padding: 0.35rem 0.75rem; border-radius: 10px; background: var(--surface-2); }
+.cl-gear .num { font-size: 2.8rem; font-weight: 650; line-height: 1; }
+.cl-label { font-size: 0.86rem; color: var(--ink-2); }
+.rpm { margin-top: 1rem; }
+.rpm-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.93rem; color: var(--ink-3); }
+.rpm-top .num { font-size: 1.25rem; font-weight: 600; color: var(--ink); }
+.rpm-bar { position: relative; height: 1rem; margin-top: 0.35rem; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.rpm-bar i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--s1); border-radius: 999px; transition: width 90ms linear; }
+.rpm-bar .rpm-red { position: absolute; left: calc(100% * 6 / 7); right: 0; top: 0; bottom: 0; background: color-mix(in oklab, var(--critical) 30%, transparent); }
+.rpm-scale { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--ink-3); margin-top: 0.2rem; }
+.cluster.is-limiter .rpm-bar i { background: var(--critical); animation: limiter 160ms steps(2) infinite; }
+@keyframes limiter { 50% { opacity: 0.35; } }
+.limiter { color: #fff; background: var(--critical); border-radius: 6px; padding: 0.1rem 0.5rem; font-weight: 650; font-size: 0.86rem; animation: limiter 200ms steps(2) infinite; }
+.cl-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.45rem; margin-top: 1rem; }
+
+/* ---------- controls ---------- */
+.ct-top { display: grid; grid-template-columns: 1fr 1fr 1.4fr; gap: 0.5rem; }
+.ign[aria-pressed="true"] { background: var(--good-soft); border-color: var(--good); color: var(--good-ink); }
+.estop { background: var(--critical); border-color: var(--critical); color: #ffffff; font-weight: 700; min-height: 3.2rem; }
+.estop:hover { background: color-mix(in oklab, var(--critical) 85%, #000); }
+.estop.is-active { box-shadow: 0 0 0 3px var(--critical-soft), 0 0 0 5px var(--critical); }
+.horn.is-on { background: var(--warning-soft); border-color: var(--warning); }
+
+.gearbox { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 0.35rem; margin-top: 0.75rem; }
+.gearbox.auto { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.gear {
+  min-height: 2.8rem; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--surface-2);
+  font: 650 1.15rem var(--font-num); color: var(--ink); cursor: pointer; touch-action: manipulation;
+}
+.gear:hover { background: var(--surface-3); }
+.gear[aria-checked="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.gear[data-g="R"][aria-checked="true"] { background: var(--warning); color: #1b1300; border-color: var(--warning); }
+
+.pedals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-top: 0.9rem; justify-items: center; }
+.pedal { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; outline: none; width: 100%; max-width: 7rem; }
+.pedal-track {
+  position: relative; width: 100%; height: clamp(9rem, 30vh, 15rem); border-radius: 12px;
+  background: var(--surface-3); border: 1px solid var(--line-strong); overflow: hidden;
+  touch-action: none; cursor: ns-resize; user-select: none; -webkit-user-select: none;
+}
+.pedal-fill { position: absolute; left: 0; right: 0; top: 0; height: 0; }
+.pedal[data-k="throttle"] .pedal-fill { background: color-mix(in oklab, var(--good) 55%, var(--surface)); }
+.pedal[data-k="brake"] .pedal-fill { background: color-mix(in oklab, var(--critical) 50%, var(--surface)); }
+.pedal[data-k="clutch"] .pedal-fill { background: color-mix(in oklab, var(--s1) 45%, var(--surface)); }
+.pedal-knob {
+  position: absolute; left: 10%; right: 10%; height: 1.6rem; top: 0; border-radius: 8px;
+  background: var(--surface); border: 2px solid var(--ink-2); box-shadow: var(--shadow);
+  background-image: repeating-linear-gradient(0deg, transparent 0 4px, var(--line) 4px 5px);
+}
+.pedal.is-held .pedal-knob { border-color: var(--ink); }
+.pedal:focus-visible .pedal-track { outline: 2px solid var(--focus); outline-offset: 3px; }
+.pedal.is-disabled { opacity: 0.4; }
+.pedal.is-disabled .pedal-track { cursor: not-allowed; }
+.pedal-name { font-weight: 650; font-size: 1rem; }
+.pedal-val { font-size: 0.93rem; color: var(--ink-2); }
+.pedal-help { margin: 0.6rem 0 0; font-size: 0.86rem; color: var(--ink-3); text-align: center; }
+
+/* ---------- wire ---------- */
+.wirebox .bytes .byte { height: 1.9rem; }
+.wire-note { margin: 0.5rem 0 0; font-size: 0.86rem; color: var(--ink-3); }
+
+/* ---------- phones ---------- */
+@media (max-width: 900px) {
+  .shell { height: auto; min-height: 3.2rem; padding: 0.4rem 0.9rem; }
+  .brand-text strong { font-size: 0.95rem; white-space: normal; }
+  .brand-text span, .shell .link-text { display: none; }
+  .banner { top: 3.2rem; padding: 0.4rem 0.9rem; font-size: 0.93rem; }
+  .console { padding: 0.6rem; }
+  .drive { grid-template-columns: 1fr; grid-template-areas: "cluster" "controls" "wire"; grid-template-rows: auto; }
+  .cluster .panel-head { display: none; }
+  .cluster { padding: 0.6rem 0.8rem; }
+  .cl-facts { margin-top: 0.6rem; }
+  .rpm { margin-top: 0.5rem; }
+  .setup-grid { grid-template-columns: 1fr 1fr; }
+  .field-wide { grid-column: 1 / -1; }
+  .setup-actions { grid-column: 1 / -1; justify-content: space-between; }
+  .keys { display: none; }
+  .cl-speed .num { font-size: 3.2rem; }
+  .cl-gear .num { font-size: 2.2rem; }
+  .ct-top { grid-template-columns: 1fr 1fr; }
+  .ct-top .estop { grid-column: 1 / -1; }
+  .gearbox { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .wirebox .bytes { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+}
+/* Phone in landscape: instruments beside the controls, pedals as tall as the screen allows */
+@media (max-height: 520px) and (orientation: landscape) {
+  .drive { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); grid-template-areas: "cluster controls" "wire controls"; }
+  .pedal-track { height: 52vh; }
+  .banner { position: static; }
+  .shell { position: static; }
+}
+@media (prefers-reduced-motion: reduce) { .limiter, .cluster.is-limiter .rpm-bar i { animation: none; } }

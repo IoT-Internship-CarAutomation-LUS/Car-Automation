@@ -27,6 +27,7 @@
       <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5M6.5 8h11v3a5.5 5.5 0 0 1-11 0zM12 16.5V21"/></symbol>
       <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
       <symbol id="i-compass" viewBox="0 0 24 24"><path d="M12 3l6.5 17L12 16l-6.5 4z" style="fill:currentColor"/></symbol>
+      <symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
       <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8v.3"/></symbol>
       <symbol id="car-top" viewBox="0 0 22 36">
         <rect x="1.5" y="1.5" width="19" height="33" rx="7" style="fill:var(--car, #5f6d79);stroke:var(--car-edge, #fff)" stroke-width="1.6"/>
@@ -64,7 +65,18 @@
     <div class="fleet-grid">
       <aside class="column" aria-labelledby="veh-h">
         <div class="column-head"><h2 id="veh-h">Vehicles</h2><span class="sub" id="veh-sub">Click a car for full telemetry</span></div>
-        <div class="scroll"><ol class="vlist" id="vlist"></ol></div>
+        <div class="scroll vscroll"><ol class="vlist" id="vlist"></ol>
+          <div class="vlist-foot" aria-label="How to read the packet ribbon">
+            <div class="vf-title">Packet ribbon</div>
+            <p>One cell per byte of the car's 32-byte packet, coloured by field. Hatched cells are bytes the car did not report.</p>
+            <div class="vf-key">
+              <span><i style="--c:var(--s1)"></i>Engine</span><span><i style="--c:var(--s2)"></i>Speed, gear</span>
+              <span><i style="--c:var(--s3)"></i>GPS</span><span><i style="--c:var(--s4)"></i>Temperatures</span>
+              <span><i style="--c:var(--s5)"></i>Fuel, battery, MIL</span><span><i style="--c:var(--s6)"></i>CAN, device</span>
+              <span><i style="--c:var(--s7)"></i>Time</span><span><i class="na"></i>Not reported</span>
+            </div>
+          </div>
+        </div>
       </aside>
 
       <section class="column map-col" aria-label="Fleet map">
@@ -92,6 +104,24 @@
       <span class="status" id="car-status" data-s="waiting">Waiting</span>
       <span class="age">Last packet <span class="num" id="car-age">--</span></span>
     </div>
+
+    <section class="panel driver-panel" id="driver-panel" hidden aria-labelledby="din-h">
+      <div class="panel-head"><h2 id="din-h">Driver inputs</h2><span class="prov" data-p="measured">Measured from the Control Console</span>
+        <span class="ph-right din-estop" id="din-estop" hidden><svg class="icon"><use href="#i-crit"/></svg>Emergency stop</span></div>
+      <div class="din">
+        <div class="din-pedals">
+        <div class="din-pedal" data-k="clutch"><div class="din-track"><div class="din-fill"></div></div><span class="din-name">Clutch</span><span class="din-val num">--</span></div>
+        <div class="din-pedal" data-k="brake"><div class="din-track"><div class="din-fill"></div></div><span class="din-name">Brake</span><span class="din-val num">--</span></div>
+        <div class="din-pedal" data-k="throttle"><div class="din-track"><div class="din-fill"></div></div><span class="din-name">Throttle</span><span class="din-val num">--</span></div>
+        </div>
+        <div class="din-facts">
+          <div class="din-gearbox"><span class="tile-label">Gear</span><span class="din-gear num" id="din-gear">--</span><span class="din-sub" id="din-trans">--</span></div>
+          <div class="din-row"><span class="tile-label">Ignition</span><span class="pill" id="din-ign" data-v="unknown">--</span></div>
+          <div class="din-row"><span class="tile-label">Brake switch</span><span class="pill" id="din-brake" data-v="unknown">--</span></div>
+          <div class="din-row"><span class="tile-label">Clutch switch</span><span class="pill" id="din-clutch" data-v="unknown">--</span></div>
+        </div>
+      </div>
+    </section>
 
     <section class="panel" aria-labelledby="wire-h">
       <div class="panel-head"><h2 id="wire-h">On the wire</h2><span class="fresh" id="fresh-wire"></span>
@@ -171,12 +201,23 @@
       <button class="pbtn" data-scenario="reset_all" type="button">Reset all <small>clear every scenario</small></button>
     </div>
     <div class="p-sent" id="p-sent" role="status"></div>
+    <div class="p-drive" id="p-drive">
+      <h3>Driver console on another device</h3>
+      <div class="p-drive-body">
+        <div class="p-qr" id="p-qr" aria-label="QR code for the driver console address"></div>
+        <div class="p-drive-text">
+          <a class="p-url num" id="p-url" href="../drive/" target="_blank" rel="noopener">/drive/</a>
+          <p id="p-drive-note">Scan with a phone on the same Wi-Fi or hotspot, or open it in a second window.</p>
+        </div>
+      </div>
+    </div>
   </aside>
 
   <div id="tooltip" role="tooltip" hidden></div>
 
   <script src="vendor/leaflet/leaflet.js"></script>
   <script src="vendor/uplot/uPlot.iife.min.js"></script>
+  <script src="vendor/qrcode/qrcode.min.js"></script>
   <script src="js/codec.js"></script>
   <script src="js/demo-data.js"></script>
   <script src="js/ui.js"></script>
