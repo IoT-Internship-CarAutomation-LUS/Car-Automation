@@ -251,7 +251,11 @@ The Level 1 screenshots in `demo/screenshots/` are unchanged from REPORT 1.
 
 ## 9. Push
 
-`[[PUSH]]`
+- `git push -u origin demo/fleet-dashboard`: **succeeded**. It created a new remote branch, set to track `origin/demo/fleet-dashboard`.
+- Branch: https://github.com/IoT-Internship-CarAutomation-LUS/Car-Automation/tree/demo/fleet-dashboard
+- The commit with all the Level 2 work was **5d8e73d** ("demo: Level 2 polish, run sheet, CLAUDE.md, REPORT 2"). This section was then added in one more small commit and pushed the same way; its hash is the branch head on GitHub.
+- Only this branch was pushed. `main` and the other branches were not touched. No force-push.
+- GitHub offers a pull request link; none was opened.
 
 ## 10. Known issues
 
