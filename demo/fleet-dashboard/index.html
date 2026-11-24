@@ -54,7 +54,7 @@
   <main class="fleet" id="view-fleet" aria-label="Fleet view">
     <h1 class="visually-hidden">Fleet overview</h1>
     <section class="kpis" aria-label="Fleet summary">
-      <div class="kpi"><span class="kpi-value num" id="kpi-online">0</span><span class="kpi-of num" id="kpi-online-of">of 0</span><span class="kpi-label">Cars online</span></div>
+      <div class="kpi"><span class="kpi-value num" id="kpi-online">0</span><span class="kpi-of" id="kpi-online-of">of 0</span><span class="kpi-label">Cars online</span></div>
       <div class="kpi"><span class="kpi-value num" id="kpi-moving">0</span><span class="kpi-label">Moving</span></div>
       <div class="kpi" id="kpi-alerts-wrap"><span class="kpi-value num" id="kpi-alerts">0</span><span class="kpi-label">Active alerts</span></div>
       <div class="kpi"><span class="kpi-value num" id="kpi-pps">0.0</span><span class="kpi-label">Packets / second</span></div>
@@ -115,7 +115,7 @@
             <span><strong>At the OBD limit.</strong> PID 0x0D is one byte, so 254 km/h is the most the wire can carry. Real speed may be higher.</span></div>
         </section>
         <section class="panel" aria-labelledby="t-h">
-          <div class="panel-head"><h2 id="t-h">Last 2 minutes</h2></div>
+          <div class="panel-head"><h2 id="t-h">Last 2 minutes</h2><span class="ph-right" id="prov-trend"></span></div>
           <div class="trend"><div class="trend-title"><span id="trend-rpm-label">RPM</span><span class="num" id="trend-rpm-now"></span></div><div id="chart-rpm"></div></div>
           <div class="trend"><div class="trend-title"><span>Speed, km/h</span><span class="num" id="trend-spd-now"></span></div><div id="chart-spd"></div></div>
         </section>

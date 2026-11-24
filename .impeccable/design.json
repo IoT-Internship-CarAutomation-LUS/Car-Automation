@@ -1,0 +1,934 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-24T19:28:15+00:00",
+  "title": "Design System: Car Automation - Fleet Telemetry",
+  "extensions": {
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Cool Ground",
+        "canonical": "#eceff1",
+        "oklch": "oklch(95.0% 0.004 236.5)",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#232425",
+          "#3e4041",
+          "#5c5e5f",
+          "#7b7e7f",
+          "#9d9fa0",
+          "#c3c4c5",
+          "#eeeeef"
+        ],
+        "dark": "#0e1317"
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Paper White",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#242424",
+          "#404040",
+          "#5d5d5d",
+          "#7d7d7d",
+          "#9e9e9e",
+          "#c4c4c4",
+          "#eeeeee"
+        ],
+        "dark": "#161d22"
+      },
+      "surface-2": {
+        "role": "neutral",
+        "displayName": "Mist",
+        "canonical": "#f4f6f7",
+        "oklch": "oklch(97.2% 0.003 228.8)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#232424",
+          "#3f4040",
+          "#5c5e5e",
+          "#7c7d7e",
+          "#9d9f9f",
+          "#c3c4c5",
+          "#eeeeef"
+        ],
+        "dark": "#1c252b"
+      },
+      "surface-3": {
+        "role": "neutral",
+        "displayName": "Fog",
+        "canonical": "#e7ebee",
+        "oklch": "oklch(93.8% 0.006 239.8)",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#232425",
+          "#3e4042",
+          "#5b5e60",
+          "#7a7e80",
+          "#9c9fa1",
+          "#c2c4c6",
+          "#edeeef"
+        ],
+        "dark": "#232e35"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Deep Slate Ink",
+        "canonical": "#13202a",
+        "oklch": "oklch(23.6% 0.027 242.3)",
+        "tonalRamp": [
+          "#090c0e",
+          "#1f252a",
+          "#384149",
+          "#535f6a",
+          "#717f8b",
+          "#94a0aa",
+          "#bdc5cc",
+          "#eaeff3"
+        ],
+        "dark": "#e7ecef"
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Slate Ink",
+        "canonical": "#41505c",
+        "oklch": "oklch(42.3% 0.028 242.5)",
+        "tonalRamp": [
+          "#090c0e",
+          "#1f252a",
+          "#374149",
+          "#52606a",
+          "#717f8c",
+          "#94a0aa",
+          "#bdc5cd",
+          "#eaeff3"
+        ],
+        "dark": "#b2bdc5"
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Muted Slate",
+        "canonical": "#56636e",
+        "oklch": "oklch(49.3% 0.024 243.8)",
+        "tonalRamp": [
+          "#090b0e",
+          "#202529",
+          "#394148",
+          "#545f69",
+          "#737f8a",
+          "#96a0a9",
+          "#bec5cc",
+          "#ebeff3"
+        ],
+        "dark": "#8d9aa4"
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#d5dbe0",
+        "oklch": "oklch(88.8% 0.009 242.9)",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#222426",
+          "#3d4043",
+          "#5a5e62",
+          "#797e82",
+          "#9b9fa2",
+          "#c1c4c7",
+          "#edeff0"
+        ],
+        "dark": "#2a353d"
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Strong Hairline",
+        "canonical": "#b4bec7",
+        "oklch": "oklch(79.6% 0.017 245.1)",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#212428",
+          "#3b4045",
+          "#575f66",
+          "#767e86",
+          "#989fa6",
+          "#c0c5c9",
+          "#eceff1"
+        ],
+        "dark": "#3b4851"
+      },
+      "shell": {
+        "role": "primary",
+        "displayName": "Highway-Sign Green",
+        "canonical": "#0c5a43",
+        "oklch": "oklch(41.7% 0.081 167.2)",
+        "tonalRamp": [
+          "#030e09",
+          "#0f2a20",
+          "#1f493a",
+          "#306a55",
+          "#4e8c74",
+          "#7bab97",
+          "#accdbf",
+          "#e1f4eb"
+        ],
+        "dark": "#0b3e30"
+      },
+      "shell-2": {
+        "role": "primary",
+        "displayName": "Sign Green Edge",
+        "canonical": "#0a4c39",
+        "oklch": "oklch(37.2% 0.071 168.0)",
+        "tonalRamp": [
+          "#040e0a",
+          "#122921",
+          "#24483b",
+          "#386957",
+          "#558a76",
+          "#80a998",
+          "#afccc0",
+          "#e3f3ec"
+        ],
+        "dark": "#093327"
+      },
+      "shell-ink": {
+        "role": "primary",
+        "displayName": "Shell White",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#242424",
+          "#404040",
+          "#5d5d5d",
+          "#7d7d7d",
+          "#9e9e9e",
+          "#c4c4c4",
+          "#eeeeee"
+        ],
+        "dark": "#ffffff"
+      },
+      "shell-ink-2": {
+        "role": "primary",
+        "displayName": "Shell Mint",
+        "canonical": "#c8e3d8",
+        "oklch": "oklch(89.3% 0.032 169.1)",
+        "tonalRamp": [
+          "#080c0a",
+          "#1d2623",
+          "#35443e",
+          "#4e635b",
+          "#6c837a",
+          "#91a39c",
+          "#bac8c2",
+          "#e9f0ed"
+        ],
+        "dark": "#a9d3c3"
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Measured Green",
+        "canonical": "#0c6b4f",
+        "oklch": "oklch(47.0% 0.093 166.5)",
+        "tonalRamp": [
+          "#020f09",
+          "#0a2b1f",
+          "#174a38",
+          "#256c53",
+          "#448e72",
+          "#75ac95",
+          "#a8cebd",
+          "#dff4eb"
+        ],
+        "dark": "#43c39a"
+      },
+      "accent-soft": {
+        "role": "primary",
+        "displayName": "Measured Green Wash",
+        "canonical": "#dcefe7",
+        "oklch": "oklch(93.6% 0.023 168.7)",
+        "tonalRamp": [
+          "#090c0b",
+          "#1f2623",
+          "#38423e",
+          "#53615c",
+          "#72827b",
+          "#95a29c",
+          "#bdc7c3",
+          "#ebf0ee"
+        ],
+        "dark": "#143329"
+      },
+      "focus": {
+        "role": "primary",
+        "displayName": "Focus Green",
+        "canonical": "#1a8c69",
+        "oklch": "oklch(57.1% 0.111 166.5)",
+        "tonalRamp": [
+          "#000f08",
+          "#012c1e",
+          "#044c37",
+          "#086e51",
+          "#319070",
+          "#6baf93",
+          "#a2d0bc",
+          "#dcf5ea"
+        ],
+        "dark": "#4fd1a7"
+      },
+      "good": {
+        "role": "secondary",
+        "displayName": "Signal Green",
+        "canonical": "#0ca30c",
+        "oklch": "oklch(62.1% 0.207 142.6)",
+        "tonalRamp": [
+          "#001000",
+          "#002f00",
+          "#005000",
+          "#007400",
+          "#159814",
+          "#61b65b",
+          "#9cd697",
+          "#d9f9d6"
+        ]
+      },
+      "good-ink": {
+        "role": "secondary",
+        "displayName": "Signal Green Ink",
+        "canonical": "#0a6f0a",
+        "oklch": "oklch(47.1% 0.155 142.6)",
+        "tonalRamp": [
+          "#020f02",
+          "#092c08",
+          "#164d14",
+          "#247021",
+          "#42923e",
+          "#74b06f",
+          "#a7d2a3",
+          "#dff6dc"
+        ],
+        "dark": "#4cc94c"
+      },
+      "good-soft": {
+        "role": "secondary",
+        "displayName": "Signal Green Wash",
+        "canonical": "#e1f3e1",
+        "oklch": "oklch(94.6% 0.031 145.3)",
+        "tonalRamp": [
+          "#090c09",
+          "#202620",
+          "#394339",
+          "#546255",
+          "#738273",
+          "#96a296",
+          "#bec7be",
+          "#ebf0eb"
+        ],
+        "dark": "#142b16"
+      },
+      "warning": {
+        "role": "secondary",
+        "displayName": "Amber Caution",
+        "canonical": "#fab219",
+        "oklch": "oklch(81.1% 0.164 78.5)",
+        "tonalRamp": [
+          "#150800",
+          "#381d00",
+          "#5e3500",
+          "#884f00",
+          "#ad6e00",
+          "#c7953d",
+          "#e2be86",
+          "#ffecce"
+        ]
+      },
+      "warning-ink": {
+        "role": "secondary",
+        "displayName": "Amber Caution Ink",
+        "canonical": "#7d5300",
+        "oklch": "oklch(47.7% 0.100 75.2)",
+        "tonalRamp": [
+          "#120901",
+          "#312006",
+          "#543a0f",
+          "#7a561b",
+          "#9d7538",
+          "#b9986b",
+          "#d8c0a0",
+          "#faecdb"
+        ],
+        "dark": "#f6c055"
+      },
+      "warning-soft": {
+        "role": "secondary",
+        "displayName": "Amber Caution Wash",
+        "canonical": "#fdf1d6",
+        "oklch": "oklch(96.1% 0.038 86.9)",
+        "tonalRamp": [
+          "#0d0b07",
+          "#28241a",
+          "#463f31",
+          "#665d49",
+          "#867c66",
+          "#a69e8c",
+          "#c9c4b6",
+          "#f1eee7"
+        ],
+        "dark": "#302611"
+      },
+      "serious": {
+        "role": "secondary",
+        "displayName": "Burnt Orange",
+        "canonical": "#ec835a",
+        "oklch": "oklch(71.7% 0.141 41.6)",
+        "tonalRamp": [
+          "#180501",
+          "#3e1707",
+          "#672b11",
+          "#95411e",
+          "#bc5f3a",
+          "#d4896c",
+          "#edb5a0",
+          "#ffe7db"
+        ]
+      },
+      "serious-ink": {
+        "role": "secondary",
+        "displayName": "Burnt Orange Ink",
+        "canonical": "#a8431b",
+        "oklch": "oklch(51.4% 0.143 40.0)",
+        "tonalRamp": [
+          "#180501",
+          "#3e1607",
+          "#682a13",
+          "#96401f",
+          "#bd5e3b",
+          "#d6886c",
+          "#eeb5a1",
+          "#ffe6db"
+        ],
+        "dark": "#f0a07f"
+      },
+      "serious-soft": {
+        "role": "secondary",
+        "displayName": "Burnt Orange Wash",
+        "canonical": "#fbe7de",
+        "oklch": "oklch(94.2% 0.025 45.9)",
+        "tonalRamp": [
+          "#0e0a09",
+          "#29221f",
+          "#483d38",
+          "#695a53",
+          "#8a7972",
+          "#a99b95",
+          "#ccc2bd",
+          "#f3edeb"
+        ],
+        "dark": "#33211a"
+      },
+      "critical": {
+        "role": "secondary",
+        "displayName": "Brake Red",
+        "canonical": "#d03b3b",
+        "oklch": "oklch(57.5% 0.186 25.2)",
+        "tonalRamp": [
+          "#1c0202",
+          "#460b0c",
+          "#74191a",
+          "#a62829",
+          "#d04845",
+          "#e67a73",
+          "#fcaca5",
+          "#ffe2dd"
+        ]
+      },
+      "critical-ink": {
+        "role": "secondary",
+        "displayName": "Brake Red Ink",
+        "canonical": "#b02626",
+        "oklch": "oklch(49.7% 0.174 26.4)",
+        "tonalRamp": [
+          "#1b0302",
+          "#440e0d",
+          "#711e1b",
+          "#a22f2b",
+          "#cc4e47",
+          "#e27d74",
+          "#f9aea6",
+          "#ffe3de"
+        ],
+        "dark": "#f07474"
+      },
+      "critical-soft": {
+        "role": "secondary",
+        "displayName": "Brake Red Wash",
+        "canonical": "#f8e0e0",
+        "oklch": "oklch(92.6% 0.026 17.6)",
+        "tonalRamp": [
+          "#0e0a0a",
+          "#2a2222",
+          "#493c3c",
+          "#6a5959",
+          "#8b7878",
+          "#aa9a9a",
+          "#cdc1c1",
+          "#f3eded"
+        ],
+        "dark": "#351a1b"
+      },
+      "muted-state": {
+        "role": "secondary",
+        "displayName": "Slate State",
+        "canonical": "#8a96a0",
+        "oklch": "oklch(66.7% 0.020 243.1)",
+        "tonalRamp": [
+          "#090b0d",
+          "#202528",
+          "#3a4147",
+          "#555f67",
+          "#747f88",
+          "#97a0a7",
+          "#bfc5ca",
+          "#ebeff2"
+        ],
+        "dark": "#6f7c86"
+      },
+      "s0": {
+        "role": "tertiary",
+        "displayName": "Neutral Slot",
+        "canonical": "#56636e",
+        "oklch": "oklch(49.3% 0.024 243.8)",
+        "tonalRamp": [
+          "#090b0e",
+          "#202529",
+          "#394148",
+          "#545f69",
+          "#737f8a",
+          "#96a0a9",
+          "#bec5cc",
+          "#ebeff3"
+        ],
+        "dark": "#8d9aa4"
+      },
+      "s1": {
+        "role": "tertiary",
+        "displayName": "Route Blue",
+        "canonical": "#2a78d6",
+        "oklch": "oklch(57.5% 0.163 255.5)",
+        "tonalRamp": [
+          "#010b1d",
+          "#052348",
+          "#0f3f78",
+          "#195cab",
+          "#377dd4",
+          "#6ba1e7",
+          "#a1c7fa",
+          "#dbf1ff"
+        ],
+        "dark": "#3987e5"
+      },
+      "s2": {
+        "role": "tertiary",
+        "displayName": "Signal Orange",
+        "canonical": "#eb6834",
+        "oklch": "oklch(67.1% 0.175 40.6)",
+        "tonalRamp": [
+          "#1b0300",
+          "#431100",
+          "#702200",
+          "#a03400",
+          "#c95322",
+          "#e0815f",
+          "#f7b198",
+          "#ffe5d7"
+        ],
+        "dark": "#d95926"
+      },
+      "s3": {
+        "role": "tertiary",
+        "displayName": "Jade",
+        "canonical": "#1baf7a",
+        "oklch": "oklch(66.9% 0.141 162.1)",
+        "tonalRamp": [
+          "#001006",
+          "#002d1a",
+          "#004e30",
+          "#007248",
+          "#009565",
+          "#5db28b",
+          "#9ad3b6",
+          "#d9f7e7"
+        ],
+        "dark": "#199e70"
+      },
+      "s4": {
+        "role": "tertiary",
+        "displayName": "Marigold",
+        "canonical": "#eda100",
+        "oklch": "oklch(76.4% 0.161 75.1)",
+        "tonalRamp": [
+          "#150800",
+          "#391d00",
+          "#603400",
+          "#8a4d00",
+          "#af6d00",
+          "#c99341",
+          "#e4bd88",
+          "#ffebcf"
+        ],
+        "dark": "#c98500"
+      },
+      "s5": {
+        "role": "tertiary",
+        "displayName": "Rose",
+        "canonical": "#e87ba4",
+        "oklch": "oklch(71.6% 0.141 357.4)",
+        "tonalRamp": [
+          "#17040b",
+          "#3c1424",
+          "#652740",
+          "#923b5e",
+          "#b9587e",
+          "#d2839f",
+          "#ecb1c4",
+          "#ffe4ef"
+        ],
+        "dark": "#d55181"
+      },
+      "s6": {
+        "role": "tertiary",
+        "displayName": "Field Green",
+        "canonical": "#008300",
+        "oklch": "oklch(52.9% 0.180 142.5)",
+        "tonalRamp": [
+          "#001000",
+          "#022d02",
+          "#064e05",
+          "#0d720b",
+          "#33952e",
+          "#6bb366",
+          "#a2d49d",
+          "#dcf8d9"
+        ],
+        "dark": "#0ca30c"
+      },
+      "s7": {
+        "role": "tertiary",
+        "displayName": "Violet",
+        "canonical": "#6250d6",
+        "oklch": "oklch(52.7% 0.197 283.4)",
+        "tonalRamp": [
+          "#090620",
+          "#201a4e",
+          "#3a3082",
+          "#5648b9",
+          "#7367e4",
+          "#9491f4",
+          "#bbbcff",
+          "#e9ebff"
+        ],
+        "dark": "#9085e9"
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Car name in the car-view header."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Panel, column and presenter headings; brand name."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Vehicle names (at 650), messages, empty states."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field, KPI and status labels; tags and badges at 0.8rem."
+      },
+      "numeric-display": {
+        "displayName": "Numeric Display",
+        "purpose": "KPI values; card speed at 1.35rem."
+      },
+      "numeric": {
+        "displayName": "Numeric",
+        "purpose": "Field-tile values, tyre pressures, gear."
+      },
+      "byte": {
+        "displayName": "Byte",
+        "purpose": "Hex cells in the packet strip, tri-state pill words, plates."
+      }
+    },
+    "rootFontSize": {
+      "default": "14px",
+      "atMinWidth1700px": "16px"
+    },
+    "textures": [
+      {
+        "name": "hatch",
+        "value": "repeating-linear-gradient(135deg, transparent 0 3px, color-mix(in oklab, var(--ink-3) 38%, transparent) 3px 4px)",
+        "purpose": "Sentinel, not-supported and not-applicable bytes and marks; always layered over surface-2 or surface-3."
+      }
+    ],
+    "seriesMap": {
+      "packetGroups": {
+        "frame": "s7",
+        "engine": "s1",
+        "motion": "s2",
+        "gps": "s3",
+        "temps": "s4",
+        "elec": "s5",
+        "body": "s6",
+        "crc": "s0",
+        "tyrePressure": "s1",
+        "tyreTemperature": "s4"
+      },
+      "carIdentities": {
+        "fronx": "s1",
+        "veyron": "s2",
+        "corolla": "s3",
+        "omni": "s4",
+        "roadster": "s7",
+        "spare": [
+          "s5",
+          "s6"
+        ],
+        "fallback": "s0"
+      }
+    },
+    "shadows": [
+      {
+        "name": "ambient-card",
+        "value": "0 1px 2px rgba(19, 32, 42, 0.06), 0 4px 14px rgba(19, 32, 42, 0.05)",
+        "dark": "0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 18px rgba(0, 0, 0, 0.25)",
+        "purpose": "Every resting surface on the ground."
+      },
+      {
+        "name": "floating-overlay",
+        "value": "0 12px 36px rgba(0, 0, 0, 0.22)",
+        "purpose": "Presenter panel only."
+      },
+      {
+        "name": "tooltip",
+        "value": "0 6px 20px rgba(0, 0, 0, 0.2)",
+        "purpose": "Inverted byte tooltip."
+      }
+    ],
+    "motion": [
+      {
+        "name": "hover",
+        "value": "160ms ease",
+        "purpose": "Vehicle row background tint."
+      },
+      {
+        "name": "byte-hover",
+        "value": "120ms",
+        "purpose": "Byte cell tint on hover."
+      },
+      {
+        "name": "gauge-fill",
+        "value": "700ms cubic-bezier(.2, .8, .2, 1)",
+        "purpose": "Gauge arc fill."
+      },
+      {
+        "name": "marker",
+        "value": "600ms ease-out",
+        "purpose": "Map car rotation, compass, state-of-charge bar."
+      },
+      {
+        "name": "feed-in",
+        "value": "900ms ease-out",
+        "purpose": "Amber wash flash on a new alert row."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "0ms",
+        "purpose": "All transitions and animations zeroed under prefers-reduced-motion."
+      }
+    ],
+    "mapLines": [
+      {
+        "name": "route-loop",
+        "value": "weight 3px, opacity 0.3, dashArray 1 7, round caps, slot colour",
+        "purpose": "Planned route of each car (fleet map)."
+      },
+      {
+        "name": "live-trail",
+        "value": "weight 6px, opacity 0.9, round caps and joins, slot colour",
+        "purpose": "Path the car has driven (fleet map)."
+      }
+    ],
+    "rings": [
+      {
+        "name": "linked",
+        "value": "box-shadow: 0 0 0 2px var(--c, var(--accent))",
+        "purpose": "Links a packet byte and its field tile both ways, in the field group's slot colour."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "single-column",
+        "value": "860px",
+        "purpose": "max-width: one column, scrolling fleet, 32-byte strip wraps to 16."
+      },
+      {
+        "name": "compact",
+        "value": "1180px",
+        "purpose": "max-width: 17rem side columns, two-column car grid, demo badge hidden."
+      },
+      {
+        "name": "projector",
+        "value": "1700px",
+        "purpose": "min-width: root 16px, 22rem side columns."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Back Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "The quiet bordered button used to return from the car view to the fleet.",
+      "html": "<button class=\"ds-back\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 18l-6-6 6-6\"/></svg>Fleet</button>",
+      "css": ":host{--ground:#eceff1;--surface:#fff;--surface-2:#f4f6f7;--surface-3:#e7ebee;--ink:#13202a;--ink-2:#41505c;--ink-3:#56636e;--line:#d5dbe0;--line-strong:#b4bec7;--shell:#0c5a43;--shell-ink:#fff;--shell-ink-2:#c8e3d8;--accent:#0c6b4f;--accent-soft:#dcefe7;--focus:#1a8c69;--good:#0ca30c;--good-ink:#0a6f0a;--good-soft:#e1f3e1;--critical:#d03b3b;--critical-ink:#b02626;--critical-soft:#f8e0e0;--warning-ink:#7d5300;--warning-soft:#fdf1d6;--s0:#56636e;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6;--hatch:repeating-linear-gradient(135deg,transparent 0 3px,color-mix(in oklab,var(--ink-3) 38%,transparent) 3px 4px);--shadow:0 1px 2px rgba(19,32,42,.06),0 4px 14px rgba(19,32,42,.05);--font-ui:'Archivo','Segoe UI',system-ui,sans-serif;--font-num:'Red Hat Mono',ui-monospace,Consolas,monospace} .ds-back{display:inline-flex;align-items:center;gap:.35rem;height:2.2rem;padding:0 .75rem 0 .55rem;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);font:550 14px/1 var(--font-ui);cursor:pointer;transition:background-color 160ms,border-color 160ms}.ds-back:hover{background:var(--surface-2);border-color:var(--line-strong)}.ds-back:focus-visible{outline:2px solid var(--focus);outline-offset:2px}"
+    },
+    {
+      "name": "Presenter Scenario Button",
+      "kind": "button",
+      "refersTo": "button-presenter",
+      "description": "Full-width tonal button in the hidden presenter panel; label left, hint right.",
+      "html": "<button class=\"ds-pbtn\">Overheat <small>Corolla</small></button>",
+      "css": ":host{--ground:#eceff1;--surface:#fff;--surface-2:#f4f6f7;--surface-3:#e7ebee;--ink:#13202a;--ink-2:#41505c;--ink-3:#56636e;--line:#d5dbe0;--line-strong:#b4bec7;--shell:#0c5a43;--shell-ink:#fff;--shell-ink-2:#c8e3d8;--accent:#0c6b4f;--accent-soft:#dcefe7;--focus:#1a8c69;--good:#0ca30c;--good-ink:#0a6f0a;--good-soft:#e1f3e1;--critical:#d03b3b;--critical-ink:#b02626;--critical-soft:#f8e0e0;--warning-ink:#7d5300;--warning-soft:#fdf1d6;--s0:#56636e;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6;--hatch:repeating-linear-gradient(135deg,transparent 0 3px,color-mix(in oklab,var(--ink-3) 38%,transparent) 3px 4px);--shadow:0 1px 2px rgba(19,32,42,.06),0 4px 14px rgba(19,32,42,.05);--font-ui:'Archivo','Segoe UI',system-ui,sans-serif;--font-num:'Red Hat Mono',ui-monospace,Consolas,monospace} .ds-pbtn{display:flex;align-items:center;justify-content:space-between;gap:.5rem;width:18rem;min-height:2.4rem;padding:.35rem .75rem;border-radius:8px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);font:550 14px var(--font-ui);cursor:pointer}.ds-pbtn small{font-weight:450;color:var(--ink-3);font-size:.8em}.ds-pbtn:hover{border-color:var(--line-strong);background:var(--surface-3)}.ds-pbtn:active{transform:translateY(1px)}.ds-pbtn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}"
+    },
+    {
+      "name": "Shell Header",
+      "kind": "nav",
+      "refersTo": "button-shell",
+      "description": "The sticky highway-sign green band: brand, demo badge, link state, mono clock, theme toggle.",
+      "html": "<header class=\"ds-shell\"><div class=\"ds-brand\"><strong>Car Automation - Fleet Telemetry</strong><span>LUS IoT Internship</span></div><span class=\"ds-badge\">Demo data: 1 recorded + 4 simulated</span><span class=\"ds-link\"><i></i>Live</span><span class=\"ds-clock\">00:44:07</span><button class=\"ds-toggle\">Dark</button></header>",
+      "css": ":host{--ground:#eceff1;--surface:#fff;--surface-2:#f4f6f7;--surface-3:#e7ebee;--ink:#13202a;--ink-2:#41505c;--ink-3:#56636e;--line:#d5dbe0;--line-strong:#b4bec7;--shell:#0c5a43;--shell-ink:#fff;--shell-ink-2:#c8e3d8;--accent:#0c6b4f;--accent-soft:#dcefe7;--focus:#1a8c69;--good:#0ca30c;--good-ink:#0a6f0a;--good-soft:#e1f3e1;--critical:#d03b3b;--critical-ink:#b02626;--critical-soft:#f8e0e0;--warning-ink:#7d5300;--warning-soft:#fdf1d6;--s0:#56636e;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6;--hatch:repeating-linear-gradient(135deg,transparent 0 3px,color-mix(in oklab,var(--ink-3) 38%,transparent) 3px 4px);--shadow:0 1px 2px rgba(19,32,42,.06),0 4px 14px rgba(19,32,42,.05);--font-ui:'Archivo','Segoe UI',system-ui,sans-serif;--font-num:'Red Hat Mono',ui-monospace,Consolas,monospace} .ds-shell{display:flex;align-items:center;gap:1rem;height:50px;padding:0 1.25rem;background:var(--shell);color:var(--shell-ink);font:14px var(--font-ui)}.ds-brand{display:flex;flex-direction:column;line-height:1.15;margin-right:auto}.ds-brand strong{font-size:15px;font-weight:650}.ds-brand span{font-size:12px;color:var(--shell-ink-2)}.ds-badge{border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:.2rem .65rem;font-size:12px}.ds-link{display:flex;align-items:center;gap:.45rem}.ds-link i{width:8px;height:8px;border-radius:50%;background:#5fe08f;box-shadow:0 0 0 3px rgba(255,255,255,.12)}.ds-clock{font-family:var(--font-num);font-variant-numeric:tabular-nums}.ds-toggle{height:2.1rem;padding:0 .7rem;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.28);border-radius:8px;color:var(--shell-ink);font:inherit;cursor:pointer}.ds-toggle:hover{background:rgba(255,255,255,.18)}.ds-toggle:focus-visible{outline:2px solid #fff;outline-offset:2px}"
+    },
+    {
+      "name": "Provenance Tags",
+      "kind": "chip",
+      "refersTo": "tag",
+      "description": "Small 6px chips for fuel type and data origin; recorded and live variants carry colour.",
+      "html": "<span class=\"ds-tag\">Petrol</span> <span class=\"ds-tag\">Simulated</span> <span class=\"ds-tag ds-rec\">Recorded</span> <span class=\"ds-tag ds-live\">Live</span>",
+      "css": ":host{--ground:#eceff1;--surface:#fff;--surface-2:#f4f6f7;--surface-3:#e7ebee;--ink:#13202a;--ink-2:#41505c;--ink-3:#56636e;--line:#d5dbe0;--line-strong:#b4bec7;--shell:#0c5a43;--shell-ink:#fff;--shell-ink-2:#c8e3d8;--accent:#0c6b4f;--accent-soft:#dcefe7;--focus:#1a8c69;--good:#0ca30c;--good-ink:#0a6f0a;--good-soft:#e1f3e1;--critical:#d03b3b;--critical-ink:#b02626;--critical-soft:#f8e0e0;--warning-ink:#7d5300;--warning-soft:#fdf1d6;--s0:#56636e;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6;--hatch:repeating-linear-gradient(135deg,transparent 0 3px,color-mix(in oklab,var(--ink-3) 38%,transparent) 3px 4px);--shadow:0 1px 2px rgba(19,32,42,.06),0 4px 14px rgba(19,32,42,.05);--font-ui:'Archivo','Segoe UI',system-ui,sans-serif;--font-num:'Red Hat Mono',ui-monospace,Consolas,monospace} .ds-tag{display:inline-flex;align-items:center;height:1.35rem;padding:0 .45rem;border-radius:6px;font:550 11px var(--font-ui);border:1px solid var(--line);color:var(--ink-2);background:var(--surface-2)}.ds-rec{color:var(--accent);border-color:color-mix(in oklab,var(--accent) 45%,transparent);background:var(--accent-soft)}.ds-live{color:var(--good-ink);border-color:color-mix(in oklab,var(--good) 45%,transparent);background:var(--good-soft)}"
+    },
+    {
+      "name": "Tri-State Pill",
+      "kind": "chip",
+      "refersTo": "pill-unknown",
+      "description": "ON / OFF / UNKNOWN for brake, clutch and A/C, plus N/A for not-applicable; unknown is dashed and never looks like off.",
+      "html": "<span class=\"ds-pill\" data-v=\"on\">ON</span> <span class=\"ds-pill\" data-v=\"off\">OFF</span> <span class=\"ds-pill\" data-v=\"unknown\">UNKNOWN</span> <span class=\"ds-pill\" data-v=\"na\">N/A (EV)</span>",
+      "css": ":host{--ground:#eceff1;--surface:#fff;--surface-2:#f4f6f7;--surface-3:#e7ebee;--ink:#13202a;--ink-2:#41505c;--ink-3:#56636e;--line:#d5dbe0;--line-strong:#b4bec7;--shell:#0c5a43;--shell-ink:#fff;--shell-ink-2:#c8e3d8;--accent:#0c6b4f;--accent-soft:#dcefe7;--focus:#1a8c69;--good:#0ca30c;--good-ink:#0a6f0a;--good-soft:#e1f3e1;--critical:#d03b3b;--critical-ink:#b02626;--critical-soft:#f8e0e0;--warning-ink:#7d5300;--warning-soft:#fdf1d6;--s0:#56636e;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6;--hatch:repeating-linear-gradient(135deg,transparent 0 3px,color-mix(in oklab,var(--ink-3) 38%,transparent) 3px 4px);--shadow:0 1px 2px rgba(19,32,42,.06),0 4px 14px rgba(19,32,42,.05);--font-ui:'Archivo','Segoe UI',system-ui,sans-serif;--font-num:'Red Hat Mono',ui-monospace,Consolas,monospace} .ds-pill{display:inline-flex;align-items:center;height:1.6rem;padding:0 .6rem;border-radius:999px;font:650 12px var(--font-num)}.ds-pill[data-v=on]{background:var(--good-soft);color:var(--good-ink)}.ds-pill[data-v=off]{background:var(--surface);color:var(--ink);border:1px solid var(--line-strong)}.ds-pill[data-v=unknown]{background:var(--surface-3);color:var(--ink-3);border:1px dashed var(--line-strong)}.ds-pill[data-v=na]{background:var(--surface-2);color:var(--ink-3);border:1px solid var(--line-strong);font-family:var(--font-ui);font-weight:600}"
+    },
+    {
+      "name": "Field Tile",
+      "kind": "card",
+      "refersTo": "field-tile",
+      "description": "Mist cell: label, mono value with Archivo unit, provenance mark. Null drops to words; alert adds the critical icon, red label and value on the red wash.",
+      "html": "<div class=\"ds-tiles\"><div class=\"ds-tile\"><span class=\"ds-l\">Coolant</span><span class=\"ds-v\">87<small>°C</small></span><span class=\"ds-prov\" data-p=\"measured\">Measured</span></div><div class=\"ds-tile ds-null\"><span class=\"ds-l\">Clutch</span><span class=\"ds-v\">Not supported</span><span class=\"ds-prov\" data-p=\"ns\">Not supported</span></div><div class=\"ds-tile ds-alert\"><span class=\"ds-l\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 3l9.5 17h-19z\"/><path d=\"M12 10v4M12 17.5v.01\"/></svg>Check-engine lamp</span><span class=\"ds-v\">ON</span><span class=\"ds-prov\" data-p=\"sim\">Simulated</span></div></div>",
+      "css": ":host{--ground:#eceff1;--surface:#fff;--surface-2:#f4f6f7;--surface-3:#e7ebee;--ink:#13202a;--ink-2:#41505c;--ink-3:#56636e;--line:#d5dbe0;--line-strong:#b4bec7;--shell:#0c5a43;--shell-ink:#fff;--shell-ink-2:#c8e3d8;--accent:#0c6b4f;--accent-soft:#dcefe7;--focus:#1a8c69;--good:#0ca30c;--good-ink:#0a6f0a;--good-soft:#e1f3e1;--critical:#d03b3b;--critical-ink:#b02626;--critical-soft:#f8e0e0;--warning-ink:#7d5300;--warning-soft:#fdf1d6;--s0:#56636e;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6;--hatch:repeating-linear-gradient(135deg,transparent 0 3px,color-mix(in oklab,var(--ink-3) 38%,transparent) 3px 4px);--shadow:0 1px 2px rgba(19,32,42,.06),0 4px 14px rgba(19,32,42,.05);--font-ui:'Archivo','Segoe UI',system-ui,sans-serif;--font-num:'Red Hat Mono',ui-monospace,Consolas,monospace} .ds-tiles{display:grid;grid-template-columns:repeat(3,10rem);gap:.45rem;font-family:var(--font-ui);font-size:14px}.ds-tile{display:flex;flex-direction:column;gap:.1rem;padding:.5rem .6rem;border-radius:8px;background:var(--surface-2)}.ds-l{display:inline-flex;align-items:center;gap:.25rem;font-size:.82rem;color:var(--ink-2)}.ds-v{font:600 1.25rem/1.2 var(--font-num);color:var(--ink)}.ds-v small{font:500 .86rem var(--font-ui);color:var(--ink-3);margin-left:.2rem}.ds-null .ds-v{font:500 1rem/1.5 var(--font-ui);color:var(--ink-3)}.ds-alert{background:var(--critical-soft)}.ds-alert .ds-v,.ds-alert .ds-l{color:var(--critical-ink)}.ds-prov{display:inline-flex;align-items:center;gap:.28rem;font-size:.86rem;color:var(--ink-3)}.ds-prov::before{content:'';width:.45rem;height:.45rem;border-radius:2px}.ds-prov[data-p=measured]{color:var(--accent)}.ds-prov[data-p=measured]::before{background:var(--accent)}.ds-prov[data-p=sim]::before{border:1.5px solid var(--ink-3)}.ds-prov[data-p=ns]::before{background:var(--hatch),var(--surface-3);border:1px solid var(--line-strong)}"
+    },
+    {
+      "name": "Packet Ribbon",
+      "kind": "custom",
+      "refersTo": "byte-cell",
+      "description": "Signature: one cell per byte, coloured by field-group slot, hatched for sentinels, CRC in slate.",
+      "html": "<div class=\"ds-ribbon\"><i style=\"--c:var(--s7)\"></i><i style=\"--c:var(--s7)\"></i><i style=\"--c:var(--s7)\"></i><i style=\"--c:var(--s7)\"></i><i style=\"--c:var(--s7)\"></i><i style=\"--c:var(--s7)\"></i><i style=\"--c:var(--s1)\"></i><i style=\"--c:var(--s1)\"></i><i style=\"--c:var(--s2)\"></i><i style=\"--c:var(--s3)\"></i><i style=\"--c:var(--s3)\"></i><i style=\"--c:var(--s3)\"></i><i style=\"--c:var(--s3)\"></i><i style=\"--c:var(--s3)\"></i><i style=\"--c:var(--s3)\"></i><i style=\"--c:var(--s3)\"></i><i style=\"--c:var(--s3)\"></i><i style=\"--c:var(--s3)\" class=\"na\"></i><i style=\"--c:var(--s1)\"></i><i style=\"--c:var(--s1)\"></i><i style=\"--c:var(--s2)\"></i><i style=\"--c:var(--s4)\"></i><i style=\"--c:var(--s4)\" class=\"na\"></i><i style=\"--c:var(--s5)\"></i><i style=\"--c:var(--s5)\"></i><i style=\"--c:var(--s5)\"></i><i style=\"--c:var(--s6)\"></i><i style=\"--c:var(--s6)\" class=\"na\"></i><i style=\"--c:var(--s4)\"></i><i style=\"--c:var(--s1)\"></i><i style=\"--c:var(--s7)\"></i><i style=\"--c:var(--s0)\" class=\"crc\"></i></div>",
+      "css": ":host{--ground:#eceff1;--surface:#fff;--surface-2:#f4f6f7;--surface-3:#e7ebee;--ink:#13202a;--ink-2:#41505c;--ink-3:#56636e;--line:#d5dbe0;--line-strong:#b4bec7;--shell:#0c5a43;--shell-ink:#fff;--shell-ink-2:#c8e3d8;--accent:#0c6b4f;--accent-soft:#dcefe7;--focus:#1a8c69;--good:#0ca30c;--good-ink:#0a6f0a;--good-soft:#e1f3e1;--critical:#d03b3b;--critical-ink:#b02626;--critical-soft:#f8e0e0;--warning-ink:#7d5300;--warning-soft:#fdf1d6;--s0:#56636e;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6;--hatch:repeating-linear-gradient(135deg,transparent 0 3px,color-mix(in oklab,var(--ink-3) 38%,transparent) 3px 4px);--shadow:0 1px 2px rgba(19,32,42,.06),0 4px 14px rgba(19,32,42,.05);--font-ui:'Archivo','Segoe UI',system-ui,sans-serif;--font-num:'Red Hat Mono',ui-monospace,Consolas,monospace} .ds-ribbon{display:grid;grid-template-columns:repeat(32,minmax(0,1fr));gap:1px;height:.6rem;width:16rem}.ds-ribbon i{display:block;border-radius:1.5px;background:var(--c,var(--s0))}.ds-ribbon i.na{background:var(--hatch),var(--surface-3)}.ds-ribbon i.crc{background:var(--ink-2)}"
+    },
+    {
+      "name": "Byte Strip",
+      "kind": "custom",
+      "refersTo": "byte-cell",
+      "description": "Car-view expansion of the ribbon: mono hex cells tinted by slot; hover deepens and rings the linked field in its slot colour; sentinels hatched.",
+      "html": "<div class=\"ds-bytes\"><span class=\"ds-byte\" style=\"--c:var(--s7)\">6B</span><span class=\"ds-byte\" style=\"--c:var(--s7)\">05</span><span class=\"ds-byte\" style=\"--c:var(--s1)\">1C</span><span class=\"ds-byte\" style=\"--c:var(--s2)\">31</span><span class=\"ds-byte ds-linked\" style=\"--c:var(--s3)\">C4</span><span class=\"ds-byte ds-na\">FF</span><span class=\"ds-byte\" style=\"--c:var(--s4)\">7F</span><span class=\"ds-byte ds-crc\">51</span></div>",
+      "css": ":host{--ground:#eceff1;--surface:#fff;--surface-2:#f4f6f7;--surface-3:#e7ebee;--ink:#13202a;--ink-2:#41505c;--ink-3:#56636e;--line:#d5dbe0;--line-strong:#b4bec7;--shell:#0c5a43;--shell-ink:#fff;--shell-ink-2:#c8e3d8;--accent:#0c6b4f;--accent-soft:#dcefe7;--focus:#1a8c69;--good:#0ca30c;--good-ink:#0a6f0a;--good-soft:#e1f3e1;--critical:#d03b3b;--critical-ink:#b02626;--critical-soft:#f8e0e0;--warning-ink:#7d5300;--warning-soft:#fdf1d6;--s0:#56636e;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6;--hatch:repeating-linear-gradient(135deg,transparent 0 3px,color-mix(in oklab,var(--ink-3) 38%,transparent) 3px 4px);--shadow:0 1px 2px rgba(19,32,42,.06),0 4px 14px rgba(19,32,42,.05);--font-ui:'Archivo','Segoe UI',system-ui,sans-serif;--font-num:'Red Hat Mono',ui-monospace,Consolas,monospace} .ds-bytes{display:grid;grid-template-columns:repeat(8,2.2rem);gap:2px}.ds-byte{display:grid;place-items:center;height:2rem;border-radius:4px;font:500 12px var(--font-num);color:var(--ink);background:color-mix(in oklab,var(--c,var(--s0)) 20%,var(--surface));border:1px solid color-mix(in oklab,var(--c,var(--s0)) 55%,var(--surface));transition:background-color 120ms}.ds-byte:hover{background:color-mix(in oklab,var(--c,var(--s0)) 45%,var(--surface))}.ds-na{background:var(--hatch),var(--surface-2);border-color:var(--line);color:var(--ink-3)}.ds-na:hover{background:var(--hatch),var(--surface-3)}.ds-crc{background:var(--surface-3);border-color:var(--line-strong);font-weight:650}.ds-linked{box-shadow:0 0 0 2px var(--c,var(--accent))}"
+    },
+    {
+      "name": "Vehicle Row",
+      "kind": "card",
+      "refersTo": "vehicle-row",
+      "description": "Divided list row in the Vehicles column: glyph, name, plate, status, speed, mini ribbon. Hover tints Mist, selected tints Measured Green Wash.",
+      "html": "<ul class=\"ds-vlist\"><li><button class=\"ds-row\"><b>Maruti Suzuki Fronx</b><span class=\"ds-st ds-moving\">Moving</span><span class=\"ds-spd\">42<small> km/h</small></span></button></li><li><button class=\"ds-row\" aria-current=\"true\"><b>Toyota Corolla</b><span class=\"ds-st ds-idle\">Idle</span><span class=\"ds-spd\">0<small> km/h</small></span></button></li></ul>",
+      "css": ":host{--ground:#eceff1;--surface:#fff;--surface-2:#f4f6f7;--surface-3:#e7ebee;--ink:#13202a;--ink-2:#41505c;--ink-3:#56636e;--line:#d5dbe0;--line-strong:#b4bec7;--shell:#0c5a43;--shell-ink:#fff;--shell-ink-2:#c8e3d8;--accent:#0c6b4f;--accent-soft:#dcefe7;--focus:#1a8c69;--good:#0ca30c;--good-ink:#0a6f0a;--good-soft:#e1f3e1;--critical:#d03b3b;--critical-ink:#b02626;--critical-soft:#f8e0e0;--warning-ink:#7d5300;--warning-soft:#fdf1d6;--s0:#56636e;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6;--hatch:repeating-linear-gradient(135deg,transparent 0 3px,color-mix(in oklab,var(--ink-3) 38%,transparent) 3px 4px);--shadow:0 1px 2px rgba(19,32,42,.06),0 4px 14px rgba(19,32,42,.05);--font-ui:'Archivo','Segoe UI',system-ui,sans-serif;--font-num:'Red Hat Mono',ui-monospace,Consolas,monospace} .ds-vlist{list-style:none;margin:0;padding:0;width:19rem;background:var(--surface);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;font:14px/1.4 var(--font-ui);color:var(--ink)}.ds-vlist li+li{border-top:1px solid var(--line)}.ds-row{display:grid;grid-template-columns:1fr auto;row-gap:.2rem;width:100%;text-align:left;padding:.55rem .9rem .6rem .8rem;background:var(--surface);border:0;border-radius:0;font:inherit;color:inherit;cursor:pointer;transition:background-color 160ms ease}.ds-row:hover{background:var(--surface-2)}.ds-row[aria-current=true]{background:var(--accent-soft)}.ds-row:focus-visible{outline:2px solid var(--focus);outline-offset:-3px}.ds-row b{font-weight:650}.ds-st{display:inline-flex;align-items:center;gap:.35rem;font-size:.86rem;color:var(--ink-2)}.ds-st::before{content:'';width:.55rem;height:.55rem;border-radius:50%;box-sizing:border-box}.ds-moving::before{background:var(--good)}.ds-idle::before{border:2px solid var(--good)}.ds-spd{grid-column:1/-1;font:600 1.35rem/1.1 var(--font-num)}.ds-spd small{font:400 .86rem var(--font-ui);color:var(--ink-3)}"
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "The 12px white work surface with the one ambient shadow; title plus freshness dot.",
+      "html": "<section class=\"ds-panel\"><div class=\"ds-ph\"><h2>Engine and speed</h2><i class=\"ds-fresh\"></i></div><p>Panel content sits on Paper White over Cool Ground.</p></section>",
+      "css": ":host{--ground:#eceff1;--surface:#fff;--surface-2:#f4f6f7;--surface-3:#e7ebee;--ink:#13202a;--ink-2:#41505c;--ink-3:#56636e;--line:#d5dbe0;--line-strong:#b4bec7;--shell:#0c5a43;--shell-ink:#fff;--shell-ink-2:#c8e3d8;--accent:#0c6b4f;--accent-soft:#dcefe7;--focus:#1a8c69;--good:#0ca30c;--good-ink:#0a6f0a;--good-soft:#e1f3e1;--critical:#d03b3b;--critical-ink:#b02626;--critical-soft:#f8e0e0;--warning-ink:#7d5300;--warning-soft:#fdf1d6;--s0:#56636e;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;--s7:#6250d6;--hatch:repeating-linear-gradient(135deg,transparent 0 3px,color-mix(in oklab,var(--ink-3) 38%,transparent) 3px 4px);--shadow:0 1px 2px rgba(19,32,42,.06),0 4px 14px rgba(19,32,42,.05);--font-ui:'Archivo','Segoe UI',system-ui,sans-serif;--font-num:'Red Hat Mono',ui-monospace,Consolas,monospace} .ds-panel{width:20rem;background:var(--surface);border-radius:12px;box-shadow:var(--shadow);padding:.8rem 1rem 1rem;font:14px/1.4 var(--font-ui);color:var(--ink)}.ds-ph{display:flex;align-items:center;gap:.5rem;margin-bottom:.7rem}.ds-ph h2{margin:0;font-size:15px;font-weight:650;letter-spacing:-.01em}.ds-fresh{width:.55rem;height:.55rem;border-radius:50%;background:var(--good)}.ds-panel p{margin:0;color:var(--ink-2)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Wire Under Glass",
+    "overview": "**Creative North Star: \"The Wire Under Glass\"**\n\nA fleet console that puts the car's 32-byte packet on screen and colours every byte by the field it carries, so the pipeline can be checked live rather than taken on trust. A road-sign green roof sits over a cool grey ground and plain white work surfaces; everything readable at projector distance comes before anything dense. Data honesty is the visual subject: measured, simulated, derived, not supported and unknown each have their own mark, and a missing byte is hatched rather than coloured or zeroed.\n\nThe register is a working instrument in a lit seminar room, not a \"command centre\". Surfaces are flat white cards with a soft ambient lift, corners are gently rounded, and colour is spent on information: eight categorical slots for packet field groups and car identities, four status hues for alerts, and one green for the shell and for measured data. The light theme is the default; the dark theme is a full token remap, not an inversion.\n\nThe system explicitly rejects the dark glowing-tile command centre: no neon, no glow, no gradients on data surfaces.",
+    "keyCharacteristics": [
+      "Highway-sign green shell over cool grey ground and white surfaces.",
+      "Archivo for words, Red Hat Mono (tabular) for every number, byte and hex value.",
+      "Packet ribbon on every vehicle row, expanded to a labelled byte strip in the car view.",
+      "Hatch texture is the single visual for \"no value on the wire\".",
+      "Every value carries a provenance mark; every status colour carries an icon or word.",
+      "Flat surfaces with one soft ambient shadow; 12px containers, 8px inner elements."
+    ],
+    "rules": [
+      {
+        "name": "The Slot Discipline Rule",
+        "body": "Series slots s0 to s7 mean \"which field group\" or \"which car\" and nothing else. A slot is never used to signal good or bad, and a status colour is never used as an identity.",
+        "section": "colors"
+      },
+      {
+        "name": "The Hatch Means Absent Rule",
+        "body": "A sentinel byte, a not-supported field or a not-applicable field is drawn with the hatch (135deg, 1px ink-3 stripe at 38% every 4px) over Fog. Never a series colour, never zero, never blank.",
+        "section": "colors"
+      },
+      {
+        "name": "The Green Roof Rule",
+        "body": "Full-strength shell green belongs to the header band only. Elsewhere green is either Measured Green (provenance) or Signal Green (status), and those two never trade places.",
+        "section": "colors"
+      },
+      {
+        "name": "The Mono For Every Number Rule",
+        "body": "Any number, byte, hex value, plate or timestamp is set in Red Hat Mono with tabular figures and zero tracking. Words, including the unit beside a number, are set in Archivo; the one exception is the ON / OFF / UNKNOWN pill value, which is a wire state.",
+        "section": "typography"
+      },
+      {
+        "name": "The Unknown Is Quieter Rule",
+        "body": "A null value drops out of mono into Archivo at 500, body size, in Muted Slate, with words (\"Not supported\", \"No reading\"), so it can never be mistaken for a measured zero.",
+        "section": "typography"
+      },
+      {
+        "name": "The Projector Floor Rule",
+        "body": "No reading text below 0.82rem (11px inside SVG gauges). Provenance words sit at 0.86rem; byte-strip labels at 0.82rem; gauge tick labels at 11px.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Lift Rule",
+        "body": "Resting surfaces use the ambient card shadow and nothing stronger. Depth inside a card is tonal. No glow, no coloured shadow, no hover lift on cards.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do put the packet ribbon on every surface that represents a car, coloured by the field-group slot map (frame s7, engine s1, speed and gear s2, GPS s3, temperatures s4, fuel/battery/MIL s5, CAN body s6, CRC s0).",
+      "Do give every value a provenance mark: measured, simulated, derived, not supported, not applicable or no reading.",
+      "Do pair every status colour with an icon or a word (status dot plus word, alert badge plus icon, alerted tile plus critical icon, CRC state plus icon and text).",
+      "Do use Red Hat Mono with tabular figures for every number, byte, plate and time.",
+      "Do keep containers at 12px and nested elements at 8px, separated by the 0.75rem gap.",
+      "Do remap every token for dark theme rather than inverting; series slots and status inks have their own dark values."
+    ],
+    "donts": [
+      "Don't colour a sentinel or unsupported byte; hatch it over Fog.",
+      "Don't render a null as 0, OFF or an empty cell; UNKNOWN gets the dashed pill, not-applicable gets the N/A pill, null values get words in Archivo.",
+      "Don't use series slots for status, or status colours for car identity.",
+      "Don't use shell green outside the header band.",
+      "Don't add glow, neon, gradient fills or stronger shadows to data surfaces; this is not a dark command centre.",
+      "Don't use car-brand logos; identity is the slot-coloured car silhouette, the name and the plate."
+    ]
+  }
+}

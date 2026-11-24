@@ -16,7 +16,7 @@
     const id = msg.source.vehicle_id, ev = msg.source.powertrain === "ev";
     const rpm = { fronx: [7000, 6000], corolla: [7000, 6200], veyron: [7000, 6400], omni: [6000, 5000], roadster: [14000, 13000] }[id]
       || (ev ? [16000, 14000] : [8000, 6500]);
-    const spd = { veyron: 420, omni: 140, roadster: 220 }[id] || 200;
+    const spd = { veyron: 420, omni: 140, roadster: 250 }[id] || 200;
     return { rpmMax: rpm[0], rpmRed: rpm[1], spdMax: spd };
   }
 
@@ -32,10 +32,10 @@
     let t = "";
     for (let i = 0; i <= ticks; i++) {
       const a = A0 + (SWEEP * i) / ticks;
-      const [x1, y1] = polar(a, R - 9), [x2, y2] = polar(a, R - 15), [lx, ly] = polar(a, R - 25);
+      const [x1, y1] = polar(a, R - 9), [x2, y2] = polar(a, R - 15), [lx, ly] = polar(a, R - 24);
       const val = (max * i) / ticks;
       t += `<line class="g-tick" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
-      t += `<text class="g-tick-label" x="${lx}" y="${ly + 3}">${max >= 1000 ? (val ? val / 1000 + "k" : "0") : Math.round(val)}</text>`;
+      t += `<text class="g-tick-label" x="${lx}" y="${ly + 4}">${max >= 1000 ? (val ? val / 1000 + "k" : "0") : Math.round(val)}</text>`;
     }
     let lim = "";
     if (limit && limit < max) {
@@ -98,8 +98,8 @@
     const sc = scales(msg);
     const ev = msg.source.powertrain === "ev";
     $("gauges").innerHTML =
-      `<div class="gauge">${gaugeSvg("g-rpm", sc.rpmMax, sc.rpmRed, ev ? "motor rpm" : "rpm", 7)}<div class="g-caption" id="g-rpm-cap">${ev ? "Motor speed" : "Engine speed"}</div></div>` +
-      `<div class="gauge">${gaugeSvg("g-spd", sc.spdMax, null, "km/h", sc.spdMax > 300 ? 7 : sc.spdMax === 140 ? 7 : 5, sc.spdMax > 254 ? 254 : null)}<div class="g-caption" id="g-spd-cap">Road speed</div></div>`;
+      `<div class="gauge">${gaugeSvg("g-rpm", sc.rpmMax, sc.rpmRed, ev ? "motor rpm" : "rpm", sc.rpmMax === 6000 ? 6 : 7)}<div class="g-caption" id="g-rpm-cap">${ev ? "Motor speed" : "Engine speed"}</div></div>` +
+      `<div class="gauge">${gaugeSvg("g-spd", sc.spdMax, null, "km/h", sc.spdMax === 420 ? 7 : sc.spdMax === 140 ? 7 : 5, sc.spdMax > 254 ? 254 : null)}<div class="g-caption" id="g-spd-cap">Road speed</div></div>`;
     $("trend-rpm-label").textContent = ev ? "Motor rpm" : "RPM";
     $("tiles").innerHTML = tileDefs(msg).map(([k, label]) =>
       `<div class="tile" data-k="${k}"><span class="tile-label">${label}</span><span class="tile-value num"></span><span class="prov"></span></div>`).join("");
@@ -128,6 +128,7 @@
     buildMap(car);
     buildCharts();
     built = car.id + ":" + msg.source.powertrain;
+    bindTileLinks();
   }
   function tyreBox(p, cls) {
     return `<div class="tyre ${cls}" data-p="${p}"><div class="tyre-pos">${FT.POS_NAME[p]}</div><div class="tyre-p num"></div><div class="tyre-t num"></div></div>`;
@@ -228,12 +229,13 @@
       const dec = n === 32 ? decodedText(key, C.unpackPacket(buf), car.msg) : tpmsText(key, C.unpackTpms(buf));
       el.querySelectorAll(".is-hot").forEach((x) => x.classList.remove("is-hot"));
       for (let i = s; i < s + len; i++) el.children[i].classList.add("is-hot");
+      linkTiles(n === 32 ? BYTE_TO_TILE[key] : TPMS_TO_TILE[key], f[4]);
       FT.showTip(`<div class="tt-title">${len > 1 ? `Bytes ${s}–${s + len - 1}` : `Byte ${s}`}: ${label}</div>
         <div class="tt-row"><span>Raw</span><span class="num">${raw}</span></div>
         <div class="tt-row"><span>Decoded</span><span>${FT.esc(na ? "Not available, unpacks to null" : dec == null ? "null" : dec)}</span></div>
         <div class="tt-row"><span>Encoding</span><span>${enc}</span></div>`, e.clientX, e.clientY);
     });
-    el.addEventListener("mouseleave", () => { FT.hideTip(); el.querySelectorAll(".is-hot").forEach((x) => x.classList.remove("is-hot")); });
+    el.addEventListener("mouseleave", () => { FT.hideTip(); el.querySelectorAll(".is-hot").forEach((x) => x.classList.remove("is-hot")); linkTiles(null); });
     let kf = -1;
     const showField = (fi) => {
       const f = fields[fi];
@@ -249,7 +251,40 @@
       showField(kf);
     });
     el.addEventListener("focus", () => { kf = 0; showField(0); });
-    el.addEventListener("blur", () => { FT.hideTip(); el.querySelectorAll(".is-hot").forEach((x) => x.classList.remove("is-hot")); });
+    el.addEventListener("blur", () => { FT.hideTip(); el.querySelectorAll(".is-hot").forEach((x) => x.classList.remove("is-hot")); linkTiles(null); });
+  }
+
+  /* Byte <-> tile link: hovering a byte lights the value it decodes to; hovering a tile lights its bytes. */
+  const BYTE_TO_TILE = { rpm: ["#tiles [data-k=rpm]"], speed: ["#tiles [data-k=speed_kmh]"], gear: ["#tiles [data-k=gear]"],
+    throttle: ["#tiles [data-k=throttle_pct]"], coolant: ["#tiles [data-k=coolant_c]"], fuel: ["#tiles [data-k=fuel_level_pct]"],
+    battery: ["#tiles [data-k=battery_v]"], mil: ["#tiles [data-k=mil_on]", "#tiles [data-k=dtc_count]"],
+    load: ["#tiles [data-k=engine_load_pct]"], intake: ["#tiles [data-k=intake_temp_c]"], ambient: ["#tiles [data-k=ambient_temp_c]"],
+    map: ["#tiles [data-k=map_kpa]"], maf: ["#tiles [data-k=maf_gps]"], lat: ["#gps-facts [data-k=lat]"], lng: ["#gps-facts [data-k=lng]"],
+    satsfix: ["#gps-facts [data-k=sats]"], can: ["#tri .tri"] };
+  const TPMS_TO_TILE = { fl_p: [".tyre[data-p=fl]"], fl_t: [".tyre[data-p=fl]"], fr_p: [".tyre[data-p=fr]"], fr_t: [".tyre[data-p=fr]"],
+    rl_p: [".tyre[data-p=rl]"], rl_t: [".tyre[data-p=rl]"], rr_p: [".tyre[data-p=rr]"], rr_t: [".tyre[data-p=rr]"] };
+  function linkTiles(sels, group) {
+    document.querySelectorAll(".is-linked").forEach((x) => { x.classList.remove("is-linked"); x.style.removeProperty("--c"); });
+    if (!sels) return;
+    for (const sel of sels) document.querySelectorAll(sel).forEach((x) => {
+      x.classList.add("is-linked"); x.style.setProperty("--c", `var(--s${C.GROUPS[group].slot})`);
+    });
+  }
+  function bindTileLinks() {
+    const strip = $("bytes32");
+    for (const [key, sels] of Object.entries(BYTE_TO_TILE)) {
+      const f = C.FIELDS_32.find((x) => x[2] === key);
+      for (const sel of sels) document.querySelectorAll(sel).forEach((tile) => {
+        if (tile.dataset.linkBound) return;
+        tile.dataset.linkBound = "1";
+        tile.addEventListener("mouseenter", () => {
+          if (strip.dataset.mode !== "bytes") return;
+          for (let i = f[0]; i < f[0] + f[1]; i++) strip.children[i].classList.add("is-hot");
+          tile.classList.add("is-linked"); tile.style.setProperty("--c", `var(--s${C.GROUPS[f[4]].slot})`);
+        });
+        tile.addEventListener("mouseleave", () => { strip.querySelectorAll(".is-hot").forEach((x) => x.classList.remove("is-hot")); linkTiles(null); });
+      });
+    }
   }
 
   /* ---------- map ---------- */
@@ -262,7 +297,7 @@
     } else map.setView(ll, 15, { animate: false });
     if (marker) marker.remove();
     if (trail) trail.remove();
-    trail = L.polyline(car.longTrail.slice(), { color: FT.cssVar(`--s${FT.slotFor(car.id)}`), weight: 4, opacity: 0.85, interactive: false }).addTo(map);
+    trail = L.polyline(car.longTrail.slice(), { color: FT.cssVar(`--s${FT.slotFor(car.id)}`), weight: 6, opacity: 0.9, lineCap: "round", lineJoin: "round", interactive: false }).addTo(map);
     marker = L.marker(ll, { icon: L.divIcon({ className: "", iconSize: [0, 0],
       html: `<div class="car-marker" style="--car:${FT.carColor(car.id)}"><svg class="car-body car-glyph" viewBox="0 0 22 36"><use href="#car-top"/></svg></div>` }), keyboard: false }).addTo(map);
     angle = g && g.heading_deg != null ? g.heading_deg : 0;
@@ -335,6 +370,11 @@
     const pt = FT.provText(state, msg);
     if (provEl.dataset.p !== state || provEl.textContent !== pt) { provEl.dataset.p = state; provEl.textContent = pt; provEl.title = pt; }
     node.classList.toggle("is-alert", !!(opts && opts.alert));
+    // status never by colour alone: an alerted tile also carries the critical icon
+    const lbl = node.querySelector(".tile-label");
+    const has = lbl.querySelector(".icon");
+    if (opts && opts.alert && !has) lbl.insertAdjacentHTML("afterbegin", FT.icon("i-crit"));
+    else if (!(opts && opts.alert) && has) has.remove();
   }
 
   function update() {
@@ -393,14 +433,15 @@
       const k = node.dataset.k;
       const val = v[k], state = FT.prov(msg, "vehicle", k);
       const pill = node.querySelector(".pill");
-      const word = val == null ? "UNKNOWN" : val ? "ON" : "OFF";
-      pill.dataset.v = word.toLowerCase();
-      pill.innerHTML = (val == null ? FT.icon("i-unknown") : "") + word;
+      const na = val == null && state === "not_applicable";
+      const word = na ? (ev ? "N/A (EV)" : "N/A") : val == null ? "UNKNOWN" : val ? "ON" : "OFF";
+      pill.dataset.v = na ? "na" : word.toLowerCase();
+      pill.innerHTML = (val == null && !na ? FT.icon("i-unknown") : "") + word;
       const p = node.querySelector(".prov");
       p.dataset.p = state;
       // Schema: a null body signal means "not found on the CAN bus yet" -- say exactly that.
       p.textContent = val == null && state !== "not_applicable" ? "Not found on the CAN bus" : FT.provText(state, msg);
-      p.title = val == null ? "UNKNOWN is not OFF: the validity bit in byte 24 is 0, so the state is not known" : "";
+      p.title = na ? "This car has no clutch pedal" : val == null ? "UNKNOWN is not OFF: the validity bit in byte 24 is 0, so the state is not known" : "";
     }
 
     // cabin + GSM
@@ -426,7 +467,7 @@
     const fact = (k) => $("gps-facts").querySelector(`[data-k="${k}"]`);
     setTile(fact("lat"), g.lat, gs, msg, 6, "°");
     setTile(fact("lng"), g.lng, gs, msg, 6, "°");
-    setTile(fact("sats"), g.sats, gs, msg, 0, "", { text: `${g.sats} ${g.fix ? "with fix" : "no fix"}` });
+    setTile(fact("sats"), g.sats, gs, msg, 0, g.fix ? "with fix" : "no fix");
     const comp = (d) => ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][Math.round(d / 45) % 8];
     setTile(fact("heading_deg"), g.heading_deg, gs, msg, 0, "", g.heading_deg == null ? {} : {
       text: `${Math.round(g.heading_deg)}° ${comp(g.heading_deg)}`,
@@ -451,7 +492,8 @@
       box.classList.toggle("is-null", t.pressure_kpa == null);
       box.classList.toggle("is-alert", low || hot);
       wheel.setAttribute("class", "tpms-wheel" + (t.pressure_kpa == null ? " is-null" : low || hot ? " is-alert" : ""));
-      box.querySelector(".tyre-p").innerHTML = t.pressure_kpa == null ? FT.esc(FT.nullText(tst, msg)) : `${t.pressure_kpa.toFixed(0)}<small> kPa</small>`;
+      box.querySelector(".tyre-p").innerHTML = t.pressure_kpa == null ? FT.esc(FT.nullText(tst, msg))
+        : `${low || hot ? FT.icon("i-crit") : ""}${t.pressure_kpa.toFixed(0)}<small> kPa</small>`;
       const tt = box.querySelector(".tyre-t");
       tt.textContent = t.temp_c == null ? "" : `${t.temp_c} °C`;
       tt.classList.toggle("hot", hot);
@@ -466,6 +508,7 @@
     charts.rpm.setScale("x", { min: now - 120, max: now });
     charts.spd.setData([xs, car.hist.map((h) => h.speed)], false);
     charts.spd.setScale("x", { min: now - 120, max: now });
+    $("prov-trend").innerHTML = FT.provTag(pr, msg);
     $("trend-rpm-now").textContent = v.rpm == null ? FT.nullText(pr, msg) : Math.round(v.rpm).toLocaleString("en-IN");
     $("trend-spd-now").textContent = v.speed_kmh == null ? FT.nullText(ps, msg) : (v.speed_kmh >= 254 ? "254+" : v.speed_kmh);
 
@@ -482,7 +525,7 @@
     if (!car || !car.msg) return;
     const age = Date.now() - car.lastRx;
     const stale = age > 3000;
-    $("car-age").textContent = FT.ageStr(age) + (age < 1000 ? "" : " ago");
+    $("car-age").textContent = FT.ageStr(age) + " ago";
     const st = FT.statusOf(car);
     $("car-status").dataset.s = st;
     $("car-status").textContent = FT.STATUS_WORD[st];

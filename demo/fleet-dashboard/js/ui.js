@@ -67,7 +67,6 @@
   };
   FT.ageStr = (ms) => {
     if (ms == null) return "--";
-    if (ms < 1000) return "now";
     if (ms < 60000) return (ms / 1000).toFixed(ms < 10000 ? 1 : 0) + " s";
     return Math.floor(ms / 60000) + " min";
   };

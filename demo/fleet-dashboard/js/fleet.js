@@ -145,12 +145,22 @@
     const bounds = [];
     if (data) {
       for (const [id, r] of Object.entries(data)) {
-        routes[id] = L.polyline(r.coords, { color: FT.cssVar(`--s${FT.slotFor(id)}`), weight: 2, opacity: 0.28, interactive: false }).addTo(map);
+        routes[id] = L.polyline(r.coords, { color: FT.cssVar(`--s${FT.slotFor(id)}`), weight: 3, opacity: 0.3, dashArray: "1 7", lineCap: "round", interactive: false }).addTo(map);
         r.coords.forEach((c) => bounds.push(c));
       }
     }
-    if (bounds.length) map.fitBounds(bounds, { padding: [24, 24] });
+    FT.fleetBounds = bounds.length ? L.latLngBounds(bounds) : null;
+    frame();
     FT.fleetMap = map;
+  }
+  function frame() {
+    if (!map || !FT.fleetBounds) return;
+    map.fitBounds(FT.fleetBounds, { padding: [28, 28], animate: false });
+    // The coast is the eastern edge of every route: move the spare width to the land side.
+    const east = map.latLngToContainerPoint(FT.fleetBounds.getNorthEast()).x;
+    const w = map.getSize().x;
+    const slack = w - 150 - east;          // keep ~150 px for the car labels east of the coast
+    if (slack > 0) map.panBy([-slack, 0], { animate: false });
   }
   FT.recolorFleetMap = function () {
     if (!map) return;
@@ -168,7 +178,7 @@
     const g = car.msg.gps;
     const mk = L.marker([g.lat, g.lng], { icon, keyboard: true, title: car.msg.source.name, riseOnHover: true }).addTo(map);
     mk.on("click", () => { location.hash = "#car/" + encodeURIComponent(car.id); });
-    trails[car.id] = L.polyline([], { color: FT.cssVar(`--s${FT.slotFor(car.id)}`), weight: 4, opacity: 0.85, lineCap: "round", interactive: false }).addTo(map);
+    trails[car.id] = L.polyline([], { color: FT.cssVar(`--s${FT.slotFor(car.id)}`), weight: 6, opacity: 0.9, lineCap: "round", lineJoin: "round", interactive: false }).addTo(map);
     markers[car.id] = { mk, from: [g.lat, g.lng], to: [g.lat, g.lng], t0: performance.now(), angle: g.heading_deg || 0, trail: [] };
     return markers[car.id];
   }
@@ -200,18 +210,23 @@
   const shortName = (n) => n.replace(/^(Maruti Suzuki|Maruti|Toyota|Bugatti|Tesla)\s+/, "").replace(/\s+16\.4$/, "");
 
   function declutterLabels() {
+    // Greedy: place each label right of its car, else left, avoiding labels placed so far and every car body.
     const items = Object.values(markers).map((m) => m.mk.getElement()).filter(Boolean)
       .map((el) => ({ wrap: el.querySelector(".car-marker"), label: el.querySelector(".car-label") }));
-    items.forEach((it) => it.wrap.classList.remove("label-left"));
-    const rects = items.map((it) => it.label.getBoundingClientRect());
-    const hit = (a, b) => !(a.right < b.left || b.right < a.left || a.bottom < b.top || b.bottom < a.top);
     const bodies = items.map((it) => it.wrap.querySelector(".car-body").getBoundingClientRect());
-    for (let i = 0; i < items.length; i++) {
-      for (let j = 0; j < items.length; j++) {
-        if (i === j) continue;
-        if (hit(rects[i], rects[j]) && i > j || hit(rects[i], bodies[j])) { items[i].wrap.classList.add("label-left"); break; }
+    const hit = (a, b) => !(a.right < b.left || b.right < a.left || a.bottom < b.top || b.bottom < a.top);
+    const placed = [];
+    items.forEach((it, i) => {
+      let best = null;
+      for (const left of [false, true]) {
+        it.wrap.classList.toggle("label-left", left);
+        const r = it.label.getBoundingClientRect();
+        const bad = placed.some((p) => hit(r, p)) || bodies.some((bd, j) => j !== i && hit(r, bd));
+        if (!bad) { best = left; break; }
       }
-    }
+      it.wrap.classList.toggle("label-left", !!best);
+      placed.push(it.label.getBoundingClientRect());
+    });
   }
   setInterval(declutterLabels, 1000);
 
@@ -231,7 +246,7 @@
     const el = document.getElementById("map-legend");
     const html = FT.carList().filter((c) => c.msg).map((c) =>
       `<span>${FT.carGlyph(c.id)}${FT.esc(shortName(c.msg.source.name))}</span>`).join("") +
-      `<span title="Thin line: the car's loop. Thick line: its last 45 seconds.">Thin line: route loop</span>`;
+      `<span title="Dotted line: the car's loop. Solid line: its last 45 seconds.">Dotted: route loop. Solid: last 45 s</span>`;
     if (el.innerHTML !== html) el.innerHTML = html;
   }
 
@@ -286,7 +301,8 @@
         if (what === "mode") renderEmptyCards();
       });
     },
-    invalidate() { if (map) setTimeout(() => map.invalidateSize(), 0); },
+    invalidate() { if (map) setTimeout(() => { map.invalidateSize(); }, 0); },
+    reframe: frame,
     setSelected(id) { for (const [k, e] of Object.entries(cardEls)) e.btn.setAttribute("aria-current", k === id ? "true" : "false"); },
   };
 })();

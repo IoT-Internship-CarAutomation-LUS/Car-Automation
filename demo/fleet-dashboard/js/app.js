@@ -156,7 +156,7 @@
       const t = ty[p] || {};
       const pr = t.pressure_kpa, tt = t.temp_c;
       rule(id, "tp-" + p, pr != null && pr < 180, pr == null || pr > 185, "critical",
-        `${FT.POS_NAME[p]} tyre ${pr != null ? pr.toFixed(0) : "--"} kPa, below 180 kPa`, "Tyre " + p.toUpperCase());
+        `${FT.POS_NAME[p]} tyre ${pr != null ? pr.toFixed(1) : "--"} kPa, below 180 kPa`, "Tyre " + p.toUpperCase());
       rule(id, "tt-" + p, tt != null && tt > 90, tt == null || tt < 88, "serious",
         `${FT.POS_NAME[p]} tyre ${tt} °C, above 90 °C`, "Tyre heat");
     }
