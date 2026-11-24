@@ -199,6 +199,22 @@
   }
   const shortName = (n) => n.replace(/^(Maruti Suzuki|Maruti|Toyota|Bugatti|Tesla)\s+/, "").replace(/\s+16\.4$/, "");
 
+  function declutterLabels() {
+    const items = Object.values(markers).map((m) => m.mk.getElement()).filter(Boolean)
+      .map((el) => ({ wrap: el.querySelector(".car-marker"), label: el.querySelector(".car-label") }));
+    items.forEach((it) => it.wrap.classList.remove("label-left"));
+    const rects = items.map((it) => it.label.getBoundingClientRect());
+    const hit = (a, b) => !(a.right < b.left || b.right < a.left || a.bottom < b.top || b.bottom < a.top);
+    const bodies = items.map((it) => it.wrap.querySelector(".car-body").getBoundingClientRect());
+    for (let i = 0; i < items.length; i++) {
+      for (let j = 0; j < items.length; j++) {
+        if (i === j) continue;
+        if (hit(rects[i], rects[j]) && i > j || hit(rects[i], bodies[j])) { items[i].wrap.classList.add("label-left"); break; }
+      }
+    }
+  }
+  setInterval(declutterLabels, 1000);
+
   function animate() {
     const now = performance.now();
     for (const m of Object.values(markers)) {

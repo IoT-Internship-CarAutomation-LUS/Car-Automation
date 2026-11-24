@@ -52,6 +52,7 @@
 
   <!-- FLEET VIEW -->
   <main class="fleet" id="view-fleet" aria-label="Fleet view">
+    <h1 class="visually-hidden">Fleet overview</h1>
     <section class="kpis" aria-label="Fleet summary">
       <div class="kpi"><span class="kpi-value num" id="kpi-online">0</span><span class="kpi-of num" id="kpi-online-of">of 0</span><span class="kpi-label">Cars online</span></div>
       <div class="kpi"><span class="kpi-value num" id="kpi-moving">0</span><span class="kpi-label">Moving</span></div>
@@ -97,9 +98,9 @@
         <span class="ph-right sub" style="font-size:.86rem;color:var(--ink-3)">Hover a byte to see its field and decoded value</span></div>
       <div class="wire">
         <div class="wire-block"><h3>32-byte vehicle packet <span class="num" id="wire-seq"></span><span class="crc-state" id="crc32"></span></h3>
-          <div class="bytes b32" id="bytes32"></div><div class="byte-labels b32" id="labels32"></div></div>
+          <div class="bytes b32" id="bytes32" tabindex="0" role="group" aria-label="32-byte vehicle packet. Use the arrow keys to step through the fields."></div><div class="byte-labels b32" id="labels32"></div></div>
         <div class="wire-block"><h3>16-byte TPMS packet <span class="crc-state" id="crc16"></span></h3>
-          <div class="bytes b16" id="bytes16"></div><div class="byte-labels b16" id="labels16"></div></div>
+          <div class="bytes b16" id="bytes16" tabindex="0" role="group" aria-label="16-byte TPMS packet. Use the arrow keys to step through the fields."></div><div class="byte-labels b16" id="labels16"></div></div>
       </div>
       <div class="wire-legend" id="wire-legend"></div>
     </section>
@@ -117,6 +118,11 @@
           <div class="panel-head"><h2 id="t-h">Last 2 minutes</h2></div>
           <div class="trend"><div class="trend-title"><span id="trend-rpm-label">RPM</span><span class="num" id="trend-rpm-now"></span></div><div id="chart-rpm"></div></div>
           <div class="trend"><div class="trend-title"><span>Speed, km/h</span><span class="num" id="trend-spd-now"></span></div><div id="chart-spd"></div></div>
+        </section>
+        <section class="panel" aria-labelledby="h-h">
+          <div class="panel-head"><h2 id="h-h">Data health</h2></div>
+          <div class="health" id="health"></div>
+          <div class="fresh-list" id="fresh-list"></div>
         </section>
       </div>
 
@@ -144,11 +150,6 @@
         <section class="panel" aria-labelledby="ty-h">
           <div class="panel-head"><h2 id="ty-h">Tyres (TPMS)</h2><span class="fresh" id="fresh-tyres"></span><span class="ph-right" id="prov-tyres"></span></div>
           <div class="tpms" id="tpms"></div>
-        </section>
-        <section class="panel" aria-labelledby="h-h">
-          <div class="panel-head"><h2 id="h-h">Data health</h2></div>
-          <div class="health" id="health"></div>
-          <div class="fresh-list" id="fresh-list"></div>
         </section>
       </div>
     </div>

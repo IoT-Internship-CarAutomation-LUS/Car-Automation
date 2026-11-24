@@ -234,6 +234,22 @@
         <div class="tt-row"><span>Encoding</span><span>${enc}</span></div>`, e.clientX, e.clientY);
     });
     el.addEventListener("mouseleave", () => { FT.hideTip(); el.querySelectorAll(".is-hot").forEach((x) => x.classList.remove("is-hot")); });
+    let kf = -1;
+    const showField = (fi) => {
+      const f = fields[fi];
+      const node = el.children[f[0]];
+      if (!node || !node.classList.contains("byte")) return;
+      const r = node.getBoundingClientRect();
+      node.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: r.left + r.width / 2, clientY: r.bottom }));
+    };
+    el.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      e.preventDefault();
+      kf = (kf + (e.key === "ArrowRight" ? 1 : -1) + fields.length) % fields.length;
+      showField(kf);
+    });
+    el.addEventListener("focus", () => { kf = 0; showField(0); });
+    el.addEventListener("blur", () => { FT.hideTip(); el.querySelectorAll(".is-hot").forEach((x) => x.classList.remove("is-hot")); });
   }
 
   /* ---------- map ---------- */
@@ -251,6 +267,11 @@
       html: `<div class="car-marker" style="--car:${FT.carColor(car.id)}"><svg class="car-body car-glyph" viewBox="0 0 22 36"><use href="#car-top"/></svg></div>` }), keyboard: false }).addTo(map);
     angle = g && g.heading_deg != null ? g.heading_deg : 0;
     setTimeout(() => map.invalidateSize(), 0);
+    if (!buildMap.ro && window.ResizeObserver) {
+      buildMap.ro = new ResizeObserver(() => { map.invalidateSize(); resizeCharts(); });
+      buildMap.ro.observe(document.querySelector(".gps-map"));
+      buildMap.ro.observe($("chart-rpm"));
+    }
   }
 
   /* ---------- charts (two single-axis charts, never a dual axis) ---------- */
@@ -266,9 +287,10 @@
       return new uPlot({
         width: w, height: 112, legend: { show: false },
         cursor: { y: false, points: { size: 8 } },
-        scales: { x: { time: true }, y: { range: (u, mn, mx) => [0, Math.max(10, mx * 1.1)] } },
+        scales: { x: { time: true }, y: { range: (u, mn, mx) => [0, niceMax(mx)] } },
         axes: [{ ...axis, values: (u, ts) => ts.map((t) => new Date(t * 1000).toLocaleTimeString("en-GB", { hour12: false, minute: "2-digit", second: "2-digit" })) },
-               { ...axis, size: 54 }],
+               { ...axis, size: 54, splits: (u) => { const m = u.scales.y.max; return [0, m / 2, m]; },
+                 values: (u, vals) => vals.map((v) => Math.round(v).toLocaleString("en-IN")) }],
         series: [{}, { label, stroke: color, width: 2, points: { show: false }, spanGaps: false }],
         hooks: { setCursor: [(u) => {
           const i = u.cursor.idx;
@@ -283,6 +305,12 @@
     charts.rpm = mk("chart-rpm", FT.cssVar("--s1"), "RPM");
     charts.spd = mk("chart-spd", FT.cssVar("--s2"), "Speed, km/h");
     ["chart-rpm", "chart-spd"].forEach((id) => $(id).addEventListener("mouseleave", FT.hideTip));
+  }
+  function niceMax(mx) {
+    if (!(mx > 0)) return 10;
+    const p = Math.pow(10, Math.floor(Math.log10(mx)));
+    for (const k of [1, 2, 2.5, 4, 5, 8, 10]) if (k * p >= mx * 1.05) return k * p;
+    return 10 * p;
   }
   function resizeCharts() {
     for (const [k, c] of Object.entries(charts)) {
@@ -370,7 +398,9 @@
       pill.innerHTML = (val == null ? FT.icon("i-unknown") : "") + word;
       const p = node.querySelector(".prov");
       p.dataset.p = state;
-      p.textContent = val == null && state !== "not_applicable" && state !== "not_supported" ? "Not found on the CAN bus" : FT.provText(state, msg);
+      // Schema: a null body signal means "not found on the CAN bus yet" -- say exactly that.
+      p.textContent = val == null && state !== "not_applicable" ? "Not found on the CAN bus" : FT.provText(state, msg);
+      p.title = val == null ? "UNKNOWN is not OFF: the validity bit in byte 24 is 0, so the state is not known" : "";
     }
 
     // cabin + GSM
