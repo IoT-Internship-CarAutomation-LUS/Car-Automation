@@ -201,7 +201,8 @@
       this.rssi = id === "omni" ? clamp(this.rssi + this.u(-2.5, 2.5), -109, -93) : clamp(this.rssi + this.u(-1.5, 1.5), -86, -63);
       return {
         type: "telemetry", schema_version: u.schema_version, ts: Math.round(now * 1000),
-        source: { vehicle_id: id, name: sp.name, model_year: sp.year, reg_no: sp.reg, powertrain: sp.pt, data_mode: this.rec ? "recorded" : "simulated" },
+        source: { vehicle_id: id, name: sp.name, model_year: sp.year, reg_no: sp.reg, powertrain: sp.pt, data_mode: this.rec ? "recorded" : "simulated", control: "auto" },
+        driver: { ignition: null, throttle_pedal_pct: null, brake_pedal_pct: null, clutch_pedal_pct: null, transmission: null, estop: null },
         vehicle, tyres, gps: Object.assign({}, u.gps, { heading_deg: Math.round(this.heading * 10) / 10 }), device: u.device,
         cabin: { temp_c: board ? Math.round(this.cabinT * 10) / 10 : null, humidity_pct: board ? Math.round(this.cabinH) : null },
         gsm: { rssi_dbm: board || id === "omni" ? Math.round(this.rssi) : null },
@@ -215,7 +216,7 @@
       const p = { vehicle: rec ? "measured" : "simulated", tyres: TYRES[id] ? "simulated" : "not_supported", gps: "simulated",
         cabin: ["corolla", "veyron", "roadster"].includes(id) ? "simulated" : "not_supported",
         gsm: ["corolla", "veyron", "roadster", "omni"].includes(id) ? "simulated" : "not_supported",
-        ev: this.sp.pt === "ev" ? "simulated" : "not_applicable", fields: { "vehicle.fuel_mileage_kmpl": "derived" } };
+        ev: this.sp.pt === "ev" ? "simulated" : "not_applicable", driver: "not_applicable", fields: { "vehicle.fuel_mileage_kmpl": "derived" } };
       const f = p.fields, set = (keys, v) => keys.forEach((k) => (f["vehicle." + k] = v));
       if (id === "fronx") { set(["fuel_level_pct", "brake", "clutch", "ac_on"], "not_supported"); f["vehicle.gear"] = "derived";
         if (rec) f["vehicle.coolant_c"] = "no_data"; else f["vehicle.ambient_temp_c"] = "not_supported"; }

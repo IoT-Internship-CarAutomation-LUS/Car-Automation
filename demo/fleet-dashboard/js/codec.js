@@ -1,5 +1,5 @@
 /* codec.js -- browser port of backend/obd_decoder.py (32-byte packet) and
- * backend/tpms_codec.py (16-byte TPMS packet), schema v2.1.0.
+ * backend/tpms_codec.py (16-byte TPMS packet), schema v2.2.0.
  *
  * The live dashboard never takes values from these bytes: values come from the
  * JSON the backend relays. The decoder is used to (a) re-check every packet's
@@ -9,7 +9,7 @@
 (function () {
   "use strict";
   const U8_NA = 0xff, U16_NA = 0xffff, I32_NA = 0x7fffffff;
-  const SCHEMA_VERSION = "2.1.0";
+  const SCHEMA_VERSION = "2.2.0";
 
   function crc8(bytes, end) {
     let crc = 0;

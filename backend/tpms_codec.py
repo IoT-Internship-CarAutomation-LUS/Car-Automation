@@ -1,5 +1,5 @@
 # tpms_codec.py -- LUS Car Automation
-# Schema v2.1.0
+# Schema v2.2.0 (16-byte layout unchanged since v2.1.0)
 #
 # Packs and unpacks the 16-byte TPMS (tyre pressure / temperature) packet,
 # the companion to the 32-byte vehicle packet in obd_decoder.py.

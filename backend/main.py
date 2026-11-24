@@ -50,6 +50,11 @@ _FLEET_DIR = Path(__file__).resolve().parent.parent / "demo" / "fleet-dashboard"
 if _FLEET_DIR.is_dir():
     app.mount("/fleet", StaticFiles(directory=_FLEET_DIR, html=True), name="fleet")
 
+# Level 2 driver console (demo/driver-console/) at /drive/ -- joins the fleet as a live car
+_DRIVE_DIR = Path(__file__).resolve().parent.parent / "demo" / "driver-console"
+if _DRIVE_DIR.is_dir():
+    app.mount("/drive", StaticFiles(directory=_DRIVE_DIR, html=True), name="drive")
+
 # ── Run ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

@@ -54,7 +54,7 @@ TCP_PORT        = 9000                       # Bench-test raw packet port (--tcp
 # CWD, not the script, so running from the repo root vs. from backend/
 # would silently split one car session's data across two directories.
 LOG_DIR         = str(Path(__file__).resolve().parent.parent / "logs")
-SCHEMA_VERSION  = "2.1.0"   # keep in step with obd_decoder.SCHEMA_VERSION
+SCHEMA_VERSION  = "2.2.0"   # keep in step with obd_decoder.SCHEMA_VERSION
 
 # Target PIDs to poll each cycle -- imported from obd_decoder.py, the source
 # of truth for the wire format. Eleven PIDs now, up from eight.
@@ -535,6 +535,11 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
                                 "vehicle_id": "fronx", "name": "Maruti Suzuki Fronx",
                                 "model_year": 2024, "reg_no": None,
                                 "powertrain": "petrol", "data_mode": "live",
+                                "control": None,          # v2.2.0: not the Control Console
+                            },
+                            "driver": {                   # v2.2.0: console pedal inputs -- none here
+                                "ignition": None, "throttle_pedal_pct": None, "brake_pedal_pct": None,
+                                "clutch_pedal_pct": None, "transmission": None, "estop": None,
                             },
                             "packet_hex":     packet_hex,
                             "tpms_hex":       None,
@@ -547,7 +552,7 @@ def run_capture(raw_mode: bool = False, fast_mode: bool = False, stream_mode: bo
                                 "vehicle": "measured", "tyres": "not_supported",
                                 "gps": "measured" if unpacked["gps"]["fix"] else "not_supported",
                                 "cabin": "not_supported", "gsm": "not_supported",
-                                "ev": "not_applicable",
+                                "ev": "not_applicable", "driver": "not_supported",
                             },
                         }
                         # Reconnect if socket is closed or not yet opened

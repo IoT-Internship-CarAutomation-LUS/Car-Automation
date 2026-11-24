@@ -1,4 +1,4 @@
-# fleet_sim.py -- LUS Car Automation fleet demo simulator (schema v2.1.0)
+# fleet_sim.py -- LUS Car Automation fleet demo simulator (schema v2.2.0)
 #
 # Five cars, 1 Hz each, one WebSocket connection per car to the real FastAPI
 # backend. Only the CAR is simulated: every message is built by packing the
@@ -458,7 +458,10 @@ class Car:
             "ts": int(now * 1000),
             "source": {"vehicle_id": self.id, "name": sp["name"], "model_year": sp["model_year"],
                        "reg_no": sp["reg_no"], "powertrain": sp["powertrain"],
-                       "data_mode": "recorded" if (self.id == "fronx" and self.recorded is not None) else "simulated"},
+                       "data_mode": "recorded" if (self.id == "fronx" and self.recorded is not None) else "simulated",
+                       "control": "auto"},
+            "driver": {"ignition": None, "throttle_pedal_pct": None, "brake_pedal_pct": None,
+                       "clutch_pedal_pct": None, "transmission": None, "estop": None},
             "vehicle": vehicle,
             "tyres": tyres or {p: dict(x) for p, x in NULL_TYRES.items()},
             "gps": {**u["gps"], "heading_deg": round(self.heading, 1) if self.heading is not None else None},
@@ -481,6 +484,7 @@ class Car:
              "cabin": "simulated" if self.id in ("corolla", "veyron", "roadster") else "not_supported",
              "gsm": "simulated" if self.id in ("corolla", "veyron", "roadster", "omni") else "not_supported",
              "ev": "simulated" if self.spec["powertrain"] == "ev" else "not_applicable",
+             "driver": "not_applicable",
              "fields": {"vehicle.fuel_mileage_kmpl": "derived"}}
         f = p["fields"]
         if self.id == "fronx":

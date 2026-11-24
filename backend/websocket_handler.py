@@ -5,8 +5,11 @@
 # Message routing:
 #   telemetry    → save to DB + fan-out to all other clients
 #   demo_control → fan-out only, NOT saved (v2.1.0, fleet demo presenter panel)
+#   vehicle_left → sent BY the backend when a socket that streamed a live,
+#                  person-driven car (source.control == "manual") disconnects (v2.2.0)
 
 import json
+import time
 from fastapi import WebSocket, WebSocketDisconnect
 from database import save_telemetry
 import config
@@ -14,6 +17,10 @@ from obd_decoder import calculate_gear
 
 # Set of all currently connected WebSocket clients
 connected_clients: set[WebSocket] = set()
+
+# v2.2.0: live, person-driven cars streamed by each socket (vehicle_id -> name),
+# so the fleet dashboard can be told when that car leaves.
+live_cars: dict[WebSocket, dict[str, str]] = {}
 
 
 async def websocket_endpoint(websocket: WebSocket):
@@ -46,7 +53,12 @@ async def websocket_endpoint(websocket: WebSocket):
                 vehicle = message.get("vehicle")
                 source = message.get("source")
                 is_ev = isinstance(source, dict) and source.get("powertrain") == "ev"
-                if isinstance(vehicle, dict) and not is_ev:
+                # v2.2.0: a person drives this car from the Control Console and the gear
+                # comes from the lever (0 = neutral even while rolling): never overwrite it.
+                is_manual = isinstance(source, dict) and source.get("control") == "manual"
+                if is_manual and source.get("vehicle_id"):
+                    live_cars.setdefault(websocket, {})[str(source["vehicle_id"])] = str(source.get("name") or source["vehicle_id"])
+                if isinstance(vehicle, dict) and not is_ev and not is_manual:
                     # Automatically estimate/inject gear if missing or 0 while moving.
                     # v2.1.0: never for EVs (single-speed, no gearbox to estimate), and
                     # a null speed/rpm is "unavailable", so it cannot drive an estimate.
@@ -69,8 +81,15 @@ async def websocket_endpoint(websocket: WebSocket):
                 print(f"[WS] Unknown message type: '{msg_type}' — ignoring.")
 
     except WebSocketDisconnect:
+        print(f"[WS] Client disconnected: {client.host}:{client.port} | Total: {len(connected_clients) - 1}")
+    finally:
         connected_clients.discard(websocket)
-        print(f"[WS] Client disconnected: {client.host}:{client.port} | Total: {len(connected_clients)}")
+        # v2.2.0: tell everyone else that this socket's live car(s) left the fleet.
+        for vehicle_id, name in live_cars.pop(websocket, {}).items():
+            await fan_out(json.dumps({
+                "type": "vehicle_left", "schema_version": config.SCHEMA_VERSION,
+                "ts": int(time.time() * 1000), "vehicle_id": vehicle_id, "name": name,
+            }), sender=websocket)
 
 
 async def fan_out(raw_message: str, sender: WebSocket):

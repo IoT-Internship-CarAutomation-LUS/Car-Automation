@@ -54,6 +54,13 @@ ROUTE_SPECS = {
         "label": "Kamarajar Salai, along Marina Beach",
         "points": [(13.07150, 80.28620), (13.05650, 80.28220), (13.04050, 80.27960)],
     },
+    # Level 2 driver console. Start: BS Abdur Rahman Crescent Institute of Science and
+    # Technology, Vandalur (Nominatim, looked up once: 12.8748935, 80.0848035).
+    "live": {
+        "label": "Crescent campus, Vandalur, and GST Road",
+        "points": [(12.87489, 80.08480), (12.89050, 80.08100), (12.86450, 80.09000)],
+        "closed": True,
+    },
 }
 
 # Fallback: hand-traced points along the same roads (used only if OSRM fails).
@@ -69,6 +76,8 @@ FALLBACK = {
              (13.04080, 80.23610), (13.04130, 80.23380), (13.04700, 80.23900), (13.05300, 80.24350)],
     "roadster": [(13.07150, 80.28620), (13.06400, 80.28420), (13.05650, 80.28220), (13.04850, 80.28080),
                  (13.04050, 80.27960)],
+    "live": [(12.87489, 80.08480), (12.87900, 80.08380), (12.88500, 80.08230), (12.89050, 80.08100),
+             (12.88000, 80.08400), (12.87000, 80.08700), (12.86450, 80.09000)],
 }
 
 OSRM = "https://router.project-osrm.org/route/v1/driving/{coords}?overview=full&geometries=geojson&steps=false"

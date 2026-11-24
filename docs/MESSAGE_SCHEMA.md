@@ -30,7 +30,7 @@ There are two links, and they use two different formats. Do not mix them up.
 
 ## Schema Version
 
-Current version is `2.1.0`. Every message carries a `"schema_version"` field (e.g. `"schema_version": "2.1.0"`) right next to `"type"` and `"ts"`.
+Current version is `2.2.0`. Every message carries a `"schema_version"` field (e.g. `"schema_version": "2.2.0"`) right next to `"type"` and `"ts"`.
 
 **Rule:** Any change to this schema bumps this version number (using MAJOR.MINOR.PATCH format) and gets logged in the change-log table below. No schema change ships without updating this number!
 
@@ -44,6 +44,7 @@ Every WebSocket message is a JSON object with a `type` field. The receiver switc
 |--------|-----------|---------|---------|
 | `telemetry` | hardware → UI | Dashboard 1, Fleet dashboard | Real-car data (ELM327 + TPMS + GPS), or a recorded / simulated car in the fleet demo |
 | `demo_control` | Fleet dashboard → simulator | Fleet demo only | Presenter scenario (v2.1.0). The backend relays it to every other client and does **not** save it — see §2b |
+| `vehicle_left` | backend → UI | Fleet dashboard | A live, person-driven car's socket closed (v2.2.0) — see §2c |
 
 Every message also carries `ts` = timestamp in **milliseconds** (Unix epoch). The UI uses `ts` to show the "fresh vs stale" indicator: if `now - ts > 3000 ms`, grey the value out.
 
@@ -56,7 +57,7 @@ Sent roughly once per second. All fields optional-safe: if a value is unavailabl
 ```json
 {
   "type": "telemetry",
-  "schema_version": "2.1.0",
+  "schema_version": "2.2.0",
   "ts": 1719750000000,
   "source": {
     "vehicle_id": "fronx",
@@ -64,7 +65,12 @@ Sent roughly once per second. All fields optional-safe: if a value is unavailabl
     "model_year": 2024,
     "reg_no": "TN 22 DX 4817",
     "powertrain": "petrol",
-    "data_mode": "recorded"
+    "data_mode": "recorded",
+    "control": "auto"
+  },
+  "driver": {
+    "ignition": null, "throttle_pedal_pct": null, "brake_pedal_pct": null,
+    "clutch_pedal_pct": null, "transmission": null, "estop": null
   },
   "vehicle": {
     "rpm": 2450,
@@ -119,6 +125,7 @@ Sent roughly once per second. All fields optional-safe: if a value is unavailabl
     "cabin": "not_supported",
     "gsm": "not_supported",
     "ev": "not_applicable",
+    "driver": "not_applicable",
     "fields": {
       "vehicle.fuel_level_pct": "not_supported",
       "vehicle.brake": "not_supported",
@@ -181,10 +188,17 @@ This example is deliberately realistic, not a best case: `gear`, `clutch`, `fuel
 | `crc_valid` / `tpms_crc_valid` | `true`/`false`/`null` | CRC-8 result of the unpack of each packet; `null` when that packet does not exist (v2.1.0) |
 | `provenance.<group>` | see below | where each group's values came from (v2.1.0) |
 | `provenance.fields` | `{ "<group>.<leaf>": state }` | optional per-leaf override of the group state (v2.1.0) |
+| `source.control` | `"auto"` / `"manual"` / `null` | `auto` = values produced by a program (simulator, replay); `manual` = a person is driving it live from the Control Console (`/drive/`); `null` = not a demo car (the real Pi) (v2.2.0) |
+| `source.data_mode` = `"live"` | | also used for a car driven live by a person from the Control Console (v2.2.0) |
+| `driver.ignition` | `true`/`false`/`null` | console ignition switch (v2.2.0) |
+| `driver.throttle_pedal_pct` / `brake_pedal_pct` / `clutch_pedal_pct` | 0–100 % / `null` | pedal positions on the console, 0 = released (v2.2.0) |
+| `driver.transmission` | `"manual"` / `"automatic"` / `null` | gearbox of the console car (v2.2.0) |
+| `driver.estop` | `true`/`false`/`null` | emergency stop is active; dashboards raise a critical alert while it is `true` (v2.2.0) |
+| `vehicle.gear` = `14` (`0x0E`) | | reverse, as the 32-byte layout always allowed; the Control Console reports it (v2.2.0) |
 
 ### Provenance (v2.1.0)
 
-`provenance` tells a dashboard how to label each value honestly. Groups: `vehicle`, `tyres`, `gps`, `cabin`, `gsm`, `ev`. A leaf takes its entry from `provenance.fields` if there is one, otherwise its group's state.
+`provenance` tells a dashboard how to label each value honestly. Groups: `vehicle`, `tyres`, `gps`, `cabin`, `gsm`, `ev`, and (v2.2.0) `driver`. For the Control Console car the pedals, brake, clutch and gear are `measured` (read from the console's controls) and everything else is `simulated`. A leaf takes its entry from `provenance.fields` if there is one, otherwise its group's state.
 
 | State | Meaning | How a UI must show it |
 |-------|---------|-----------------------|
@@ -256,6 +270,16 @@ This applies to every field packed as one of those widths (RPM, speed, temperatu
 
 ---
 
+## 2c. `vehicle_left` — backend → UI (v2.2.0)
+
+When a WebSocket that streamed a car with `source.control == "manual"` closes (tab closed, phone locked, network lost), the backend sends every other client:
+
+```json
+{ "type": "vehicle_left", "schema_version": "2.2.0", "ts": 1719750000000, "vehicle_id": "live-k3f9", "name": "Live Demo Car" }
+```
+
+It is not stored. The fleet dashboard posts "Live car left: <name>" and removes the car.
+
 ## 3. Connection details
 
 - Transport: **WebSocket**
@@ -325,6 +349,7 @@ Any change to this schema goes through the team lead and gets a line here so nob
 
 | Date | Change | By |
 |------|--------|-----|
+| 2026-11-25 | **v2.2.0 — additive only.** `source.control` (`auto` / `manual`), `data_mode` `live` for a person-driven car, and a `driver` block {ignition, throttle_pedal_pct, brake_pedal_pct, clutch_pedal_pct, transmission, estop} (null leaves for every other car) plus a `driver` provenance group. New backend-originated `vehicle_left` message (§2c). The backend does not estimate a gear for `control: "manual"` cars (the gear comes from the console lever). Reverse is reported as gear `14` (`0x0E`). 32-byte and 16-byte layouts unchanged. | Team lead, for the fleet demo (Level 2) |
 | 2026-11-25 | **v2.1.0 — additive only.** New `telemetry` keys: `source` {vehicle_id, name, model_year, reg_no, powertrain, data_mode}, `gps.heading_deg`, `cabin` {temp_c, humidity_pct} (DHT11, Board 1), `gsm` {rssi_dbm} (SIM800L, Board 2), `ev` {soc_pct, range_km}, `packet_hex`, `tpms_hex`, `crc_valid`, `tpms_crc_valid`, and the `provenance` map (§2). New `demo_control` message type, relayed but not stored (§2b). 16-byte TPMS byte layout specified and implemented (§4b, `backend/tpms_codec.py`). `vehicle.gear` range noted as 0–7. The backend no longer injects a gear estimate for EVs or when speed/rpm is null. 32-byte layout unchanged. | Team lead, for the fleet demo |
 | 2026-07-15 | **v2.0.0 — BREAKING.** Track 2 (`platform_status`, `command`) removed entirely along with the Control Console dashboard. Unavailable values no longer become `0`/`false` — they are now sentinels on the wire (`0xFF`/`0xFFFF`/`0x7FFFFFFF`) that unpack to JSON `null`. Percent scaling changed from ×2.55 to ×2 (fixes the 100%-collides-with-NA-sentinel bug). Checksum changed from XOR to CRC-8-CCITT. `battery_mv` → `battery_v` (float volts, not millivolts int). `clutch_pct` (0–100) → `clutch` (three-state bool). `brake_pct` removed (brake is now three-state bool only). New fields: `ambient_temp_c`, `map_kpa`, `mil_on`, `device` (power_ok/gps_ok/can_ok/seq). AC/brake/clutch now carry validity bits distinguishing "not found yet" from "off". | Shaahir (team lead) |
 | 2026-07-06 | v1.0.0 — formalized schema_version field across all message types; added brake_pct to telemetry.vehicle | Shaahir (team lead) |
