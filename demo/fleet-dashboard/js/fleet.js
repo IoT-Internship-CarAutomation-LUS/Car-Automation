@@ -46,11 +46,9 @@
       <button class="vcard" type="button" style="--car:${FT.carColor(car.id)}">
         ${FT.carGlyph(car.id)}
         <span class="vcard-row r1"><span class="vcard-name"></span><span class="vcard-mode"></span></span>
-        <span class="vcard-speedbox"><span class="vcard-speed num"></span><span class="vcard-unit">km/h</span></span>
         <span class="vcard-row r2"><span class="plate"></span><span class="status"></span></span>
-        <span class="vcard-rpm num"></span>
+        <span class="vcard-row r3"><span class="vcard-speed num"></span><span class="vcard-unit">km/h</span><span class="vcard-rpm num"></span><span class="vcard-alerts"></span></span>
         <span class="vcard-live" hidden>Driven live from the Control Console</span>
-        <span class="vcard-alerts"></span>
         <span class="vcard-wire"><span class="vcard-ribbon ribbon" title="The live 32-byte packet, one cell per byte, coloured by field. Hatched cells carry the 'not available' sentinel."></span><span class="vcard-ribbon-note"></span></span>
       </button>`;
     const btn = li.firstElementChild;
@@ -94,9 +92,9 @@
     if (v.gear === 14) e.rpm.textContent += " R";
     e.rpm.title = motor ? "Motor rpm (electric)" : "Engine rpm";
     const al = FT.alertsFor(car.id);
-    const shown = al.slice(0, 2).map((a) =>
+    const shown = al.slice(0, 1).map((a) =>
       `<span class="abadge sev-${a.sev}" title="${FT.esc(a.msg)}">${FT.icon(FT.sevIcon(a.sev))}${FT.esc(a.short || "Alert")}</span>`).join("");
-    const more = al.length > 2 ? `<span class="abadge sev-${al[2].sev}" title="${FT.esc(al.slice(2).map((a) => a.msg).join("\n"))}">+${al.length - 2}</span>` : "";
+    const more = al.length > 1 ? `<span class="abadge sev-${al[1].sev}" title="${FT.esc(al.slice(1).map((a) => a.msg).join("\n"))}">+${al.length - 1}</span>` : "";
     const html = shown + more;
     if (e.alerts.innerHTML !== html) e.alerts.innerHTML = html;
     if (e.lastHex !== m.packet_hex) { FT.renderRibbon(e.ribbon, m.packet_hex); e.lastHex = m.packet_hex; }

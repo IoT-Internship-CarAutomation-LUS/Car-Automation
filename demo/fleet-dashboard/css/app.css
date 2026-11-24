@@ -166,8 +166,8 @@ button { font: inherit; color: inherit; }
 .vlist > li + li { border-top: 1px solid var(--line); }
 .vcard {
   /* Compact row: six cars fit without scrolling at 1920x1080 and 1536x864 (browser chrome included). */
-  display: grid; grid-template-columns: 1.1rem minmax(0, 1fr) auto; column-gap: 0.55rem; row-gap: 0.18rem;
-  width: 100%; text-align: left; padding: 0.5rem 0.9rem 0.55rem 0.8rem;
+  display: grid; grid-template-columns: 1.1rem minmax(0, 1fr); column-gap: 0.55rem; row-gap: 0.08rem;
+  width: 100%; text-align: left; padding: 0.36rem 0.85rem 0.42rem 0.8rem;
   background: var(--surface); border: 0; border-radius: 0; cursor: pointer;
   transition: background-color 160ms ease;
 }
@@ -176,18 +176,21 @@ button { font: inherit; color: inherit; }
 .vcard:focus-visible { outline-offset: -3px; }
 .car-glyph { width: 1.1rem; height: 1.8rem; flex: none; }
 .vcard .car-glyph { grid-row: 1 / span 2; grid-column: 1; align-self: start; margin-top: 0.1rem; }
-.vcard-row { display: flex; align-items: center; gap: 0.45rem; min-width: 0; }
-.vcard-row.r1 { grid-column: 2; grid-row: 1; }
-.vcard-row.r2 { grid-column: 2; grid-row: 2; }
+.vcard-row { display: flex; align-items: center; gap: 0.45rem; min-width: 0; grid-column: 2; }
+.vcard-row.r1 { justify-content: space-between; }
+.vcard-row.r2 { justify-content: space-between; }
+.vcard-row.r3 { align-items: baseline; gap: 0.3rem; }
 .vcard-name { font-weight: 650; font-size: 1rem; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .vcard-mode { flex: none; display: inline-flex; }
-.vcard-speedbox { grid-column: 3; grid-row: 1; justify-self: end; display: flex; align-items: baseline; gap: 0.25rem; white-space: nowrap; }
-.vcard-speed { font-size: 1.3rem; font-weight: 600; line-height: 1.1; }
+.vcard-speed { font-size: 1.3rem; font-weight: 600; line-height: 1; }
 .vcard-unit { font-size: 0.8rem; color: var(--ink-3); }
-.vcard-rpm { grid-column: 3; grid-row: 2; justify-self: end; font-size: 0.86rem; color: var(--ink-2); white-space: nowrap; }
-.vcard-live { grid-column: 2 / span 2; font-size: 0.8rem; font-weight: 550; color: var(--good-ink); }
-.vcard-alerts { grid-column: 2 / span 2; display: flex; gap: 0.25rem; flex-wrap: wrap; }
-.vcard-wire { grid-column: 2 / span 2; display: flex; align-items: center; gap: 0.5rem; margin-top: 0.1rem; }
+.vcard-rpm { margin-left: 0.4rem; font-size: 0.86rem; color: var(--ink-2); white-space: nowrap; }
+.vcard-alerts { margin-left: auto; display: flex; gap: 0.25rem; flex: none; align-self: center; }
+.vcard .plate { height: 1.2rem; }
+.vcard .abadge { height: 1.2rem; }
+.vcard .tag { height: 1.25rem; }
+.vcard-live { grid-column: 2; font-size: 0.8rem; font-weight: 550; color: var(--good-ink); line-height: 1.2; }
+.vcard-wire { grid-column: 2; display: flex; align-items: center; gap: 0.5rem; margin-top: 0.1rem; }
 .vcard-ribbon { flex: 1; min-width: 0; }
 .vcard-ribbon-note { font-size: 0.78rem; color: var(--ink-3); font-family: var(--font-num); white-space: nowrap; }
 .vcard.is-offline .vcard-speed, .vcard.is-offline .vcard-rpm { color: var(--ink-3); }

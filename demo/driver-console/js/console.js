@@ -383,9 +383,10 @@
       text = manual() ? (S.gear === 0 ? "Engine running. Hold the clutch, pick 1st and press the throttle." : "In gear. Press the throttle to move off.")
                       : (S.autoSel === "D" || S.autoSel === "R" ? "Release the brake and press the throttle." : "Select D (or R) to drive.");
     } else if (S.connected) {
+      // Kept free of the live speed: the banner is an aria-live region and must not chatter 5 times a second.
       tone = "good"; icon = "i-check";
-      const gl = reportedGear() === 14 ? "reverse" : reportedGear() === 0 ? "neutral" : `gear ${reportedGear()}`;
-      text = `Driving at ${Math.round(kmh)} km/h in ${gl}. The fleet dashboard sees every packet.`;
+      const gl = reportedGear() === 14 ? "in reverse" : reportedGear() === 0 ? "in neutral" : "";
+      text = `Driving${gl ? " " + gl : ""}. The fleet dashboard sees every packet.`;
     }
     const key = tone + text;
     if (key !== lastBanner) {
@@ -400,6 +401,8 @@
     $("fresh-text").textContent = !S.connected ? "Not sending" : fresh ? `Sending ${S.ign ? "5" : "1"} per second` : "Waiting";
   }
 
+  const shown = {};
+  function setHtml(id, html) { if (shown[id] !== html) { shown[id] = html; $(id).innerHTML = html; } }
   function render() {
     const kmh = Math.abs(S.v) * 3.6;
     $("r-speed").textContent = Math.round(kmh);
@@ -409,9 +412,9 @@
     $("rpm-fill").style.width = Math.min(100, (S.rpm / 7000) * 100) + "%";
     document.querySelector(".cluster").classList.toggle("is-limiter", S.limiter);
     $("limiter").hidden = !S.limiter;
-    $("r-cool").innerHTML = S.ign ? `${Math.round(S.coolant)}<small>°C</small>` : "--";
-    $("r-fuel").innerHTML = S.ign ? `${S.fuel.toFixed(1)}<small>%</small>` : "--";
-    $("r-batt").innerHTML = `${S.ign ? "14.1" : "12.4"}<small>V</small>`;
+    setHtml("r-cool", S.ign ? `${Math.round(S.coolant)}<small>°C</small>` : "--");
+    setHtml("r-fuel", S.ign ? `${S.fuel.toFixed(1)}<small>%</small>` : "--");
+    setHtml("r-batt", `${S.ign ? "14.1" : "12.4"}<small>V</small>`);
     for (const k of ["throttle", "brake", "clutch"]) {
       const el = $("p-" + k), pct = Math.round(S.ped[k] * 100);
       el.querySelector(".pedal-fill").style.height = pct + "%";

@@ -232,4 +232,11 @@ Don't:
 - Don't use shell green outside the header band.
 - Don't add glow, neon, gradient fills or stronger shadows to data surfaces; this is not a dark command centre.
 - Don't use car-brand logos; identity is the slot-coloured car silhouette, the name and the plate.
+Level 2 additions (driver console at /drive/, same world, shared app.css):
+- Driving readouts are the one place mono goes display-size: speed 4.2rem (3.2rem on phones), gear 2.8rem, inside an 8px Fog chip.
+- Pedals are tall flat tracks (throttle = good tint, brake = critical tint, clutch = slot-1 tint) with a ribbed Surface knob; they spring back to 0 on release.
+- The status banner reuses the status palette as a full-width strip (info / good / warning / critical), always with an icon and words; it never carries a number that changes several times a second.
+- The primary action (Connect) uses the accent with Surface text, so it holds contrast in both themes. Shell green stays in the header.
+- A live, person-driven car on the fleet view gets the next spare slot (s5, s6; freed when it leaves), a "Live" tag and the line "Driven live from the Control Console". Its car view adds a Driver inputs panel (three pedal bars, gear, ignition and switch pills).
+- The Control Console route loop is drawn in neutral ink, not an identity slot, because every live car shares it.
 Full: .impeccable/design-full.md (read a section when you need its detail)

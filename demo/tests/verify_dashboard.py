@@ -89,12 +89,19 @@ def run_checks(page, errors, mode_label):
         page.mouse.move(5, 5)
     page.goto(BASE + ("?mode=standalone" if mode_label == "standalone" else "") + "#car/veyron")
     page.wait_for_function("document.querySelectorAll('#bytes32 .byte').length === 32", timeout=10000)
+    # The simulated Veyron reaches 254 km/h only in some cruise phases, so wait up to 3 minutes and,
+    # on every sample, check the note matches the speed shown (never shown below 254, never missing at 254).
     t0 = time.time()
-    seen = False
-    while time.time() - t0 < 90 and not seen:
-        seen = page.is_visible("#obd-limit")
+    seen, mismatch = False, 0
+    while time.time() - t0 < 180 and not seen:
+        st = page.evaluate("""(() => { const c = window.FT.state.cars.veyron; const s = c && c.msg ? c.msg.vehicle.speed_kmh : null;
+              return { s, shown: !document.getElementById('obd-limit').hidden }; })()""")
+        if st["s"] is not None and (st["s"] >= 254) != st["shown"]:
+            mismatch += 1
+        seen = st["shown"]
         page.wait_for_timeout(500)
-    check(f"[{mode_label}] Veyron 'OBD limit' note appears when speed clamps at 254", seen, f"after {time.time() - t0:.0f} s")
+    check(f"[{mode_label}] Veyron 'OBD limit' note appears when speed clamps at 254 (and only then)", seen and mismatch <= 1,
+          f"after {time.time() - t0:.0f} s, {mismatch} mismatched samples")
 
     # scenarios
     page.goto(BASE + ("?mode=standalone" if mode_label == "standalone" else "") + "#fleet")
