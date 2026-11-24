@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How data flows - Car Automation</title>
+  <meta name="description" content="Follow one value from the car's ECU to the number on the dashboard, through every stage, with the real code and evidence from the internship report.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230c5a43'/%3E%3Ccircle cx='8' cy='16' r='3' fill='white'/%3E%3Ccircle cx='24' cy='16' r='3' fill='white'/%3E%3Cpath d='M11 16h10' stroke='white' stroke-width='2.4'/%3E%3C/svg%3E">
+  <script>
+    (function () { try { var t = localStorage.getItem("ft-theme"); if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t); } catch (e) {} })();
+  </script>
+  <link rel="stylesheet" href="../fleet/css/app.css">
+  <link rel="stylesheet" href="css/flow.css">
+</head>
+<body class="flow-page">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+      <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+      <symbol id="i-next" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" style="fill:currentColor"/></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5.5v13M16 5.5v13" stroke-width="3"/></symbol>
+      <symbol id="i-crit" viewBox="0 0 24 24"><path d="M8.2 3h7.6L21 8.2v7.6L15.8 21H8.2L3 15.8V8.2z"/><path d="M12 7.5v5.5M12 16.2v.3"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.7 2.7L16.2 9.5"/></symbol>
+      <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    </defs>
+  </svg>
+
+  <header class="shell">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="rgba(255,255,255,0.14)"/><circle cx="8" cy="16" r="3.2" fill="#fff"/><circle cx="24" cy="16" r="3.2" fill="#fff"/><path d="M11.5 16h9" stroke="#fff" stroke-width="2.4"/></svg>
+      <div class="brand-text"><strong>Car Automation - How data flows</strong><span>One value, from the car's ECU to the dashboard</span></div>
+    </div>
+    <span class="shell-item link" id="link" data-state="connecting"><span class="link-dot" aria-hidden="true"></span><span class="link-text" id="link-text">Connecting</span></span>
+    <a class="shell-link" href="../fleet/">Fleet dashboard</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark theme"><svg class="icon"><use href="#i-moon"/></svg><span>Dark</span></button>
+  </header>
+
+  <div class="toolbar" role="toolbar" aria-label="Trace controls">
+    <label class="tb-field"><span>Trace</span>
+      <select id="pid">
+        <option value="0x0C">Engine speed (RPM), PID 0x0C</option>
+        <option value="0x0D">Vehicle speed, PID 0x0D</option>
+        <option value="0x05">Coolant temperature, PID 0x05</option>
+        <option value="0x11">Throttle position, PID 0x11</option>
+        <option value="0x2F">Fuel level, PID 0x2F</option>
+      </select></label>
+    <label class="tb-field"><span>Source</span><select id="source"><option value="">Waiting for cars</option></select></label>
+    <button class="tb-btn" id="pause" type="button" aria-pressed="false"><svg class="icon"><use href="#i-pause"/></svg><span>Pause</span></button>
+    <button class="tb-btn" id="report" type="button" aria-pressed="false">Report example</button>
+    <button class="tb-btn" id="summary" type="button" aria-pressed="false">Summary view</button>
+    <span class="tb-status" id="tb-status" role="status"></span>
+  </div>
+
+  <main class="flow" id="flow">
+    <section class="pipeline" id="pipeline" aria-label="Pipeline stages">
+      <div class="fam-row" aria-hidden="true">
+        <span class="fam fam-hw">In the car: hardware</span>
+        <span class="fam fam-sw">Our code: software</span>
+      </div>
+      <div class="gps-row">
+        <button class="node node-gps" type="button" data-stage="gps" aria-label="GPS side branch: NEO-6M to latitude and longitude">
+          <span class="node-num num">GPS</span><span class="node-name">NEO-6M</span><span class="node-sub">NMEA to lat/lng</span>
+        </button>
+        <svg class="gps-join" aria-hidden="true" preserveAspectRatio="none" viewBox="0 0 100 100"><path d="M0 50 H86 V100" fill="none" vector-effect="non-scaling-stroke"/></svg>
+      </div>
+      <ol class="stages" id="stages"></ol>
+      <div class="track" aria-hidden="true"><span class="dot" id="dot"></span></div>
+    </section>
+
+    <section class="stage-view" id="stage-view" aria-live="off">
+      <div class="sv-head">
+        <div class="sv-titles">
+          <h1 id="sv-title">Stage</h1>
+          <span class="sv-tag" id="sv-tag"></span>
+          <span class="sv-car" id="sv-car"></span>
+        </div>
+        <div class="sv-nav">
+          <button class="tb-btn icon-btn" id="prev" type="button" aria-label="Previous stage"><svg class="icon"><use href="#i-back"/></svg></button>
+          <button class="tb-btn" id="play" type="button" aria-pressed="false"><svg class="icon"><use href="#i-play"/></svg><span>Walk through</span></button>
+          <button class="tb-btn icon-btn" id="next" type="button" aria-label="Next stage"><svg class="icon"><use href="#i-next"/></svg></button>
+          <span class="sv-keys">Keys: Left / Right, Space, 1 to 8</span>
+        </div>
+      </div>
+      <div class="panes">
+        <section class="pane pane-what" aria-labelledby="h-what"><h2 id="h-what">What happens</h2><div id="p-what"></div></section>
+        <section class="pane pane-data" aria-labelledby="h-data"><h2 id="h-data">The data here</h2><div id="p-data"></div></section>
+        <section class="pane pane-evidence" aria-labelledby="h-ev"><h2 id="h-ev">Evidence from the report</h2><div id="p-evidence"></div></section>
+        <section class="pane pane-code" aria-labelledby="h-code"><h2 id="h-code">The code</h2><div id="p-code"></div></section>
+      </div>
+    </section>
+
+    <section class="summary-view" id="summary-view" hidden aria-labelledby="sum-h">
+      <div class="sv-head"><div class="sv-titles"><h1 id="sum-h">All eight steps, one value</h1><span class="sv-car" id="sum-car"></span></div></div>
+      <ol class="sum-list" id="sum-list"></ol>
+    </section>
+  </main>
+
+  <dialog class="lightbox" id="lightbox" aria-labelledby="lb-cap">
+    <figure><div id="lb-holder"></div><figcaption id="lb-cap"></figcaption></figure>
+    <button class="lb-close" id="lb-close" type="button" aria-label="Close"><svg class="icon"><use href="#i-close"/></svg></button>
+  </dialog>
+
+  <script src="../fleet/js/codec.js"></script>
+  <script src="../fleet/js/demo-data.js"></script>
+  <script src="../fleet/js/ui.js"></script>
+  <script src="../fleet/js/standalone.js"></script>
+  <script src="../fleet/js/app.js"></script>
+  <script src="js/figures.js"></script>
+  <script src="js/snippets.js"></script>
+  <script src="js/flow-model.js"></script>
+  <script src="js/flow.js"></script>
+  <script type="module" src="js/hl.js"></script>
+</body>
+</html>

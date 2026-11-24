@@ -393,6 +393,7 @@
     $("car-plate").textContent = src.reg_no || "No plate";
     $("car-plate").dataset.ev = ev;
     $("car-power").textContent = ev ? "Electric" : "Petrol";
+    $("trace").href = "../flow/#car=" + encodeURIComponent(car.id);
     $("car-mode").outerHTML = FT.modeTag(src.data_mode).replace("<span class=\"tag", "<span id=\"car-mode\" class=\"tag");
     document.title = `${src.name} - Fleet Telemetry`;
 

@@ -1,0 +1,82 @@
+{
+ "fig5-11-capture-in-fronx": {
+  "file": "img/fig5-11-capture-in-fronx.jpg",
+  "figure": "5.11",
+  "caption": "Live Capture Inside the Fronx, 10 July",
+  "page": 45,
+  "width": 520,
+  "height": 924
+ },
+ "fig4-1-obd-pins": {
+  "file": "img/fig4-1-obd-pins.png",
+  "figure": "4.1",
+  "caption": "OBD-II Connector Pin Layout and the Pins Used",
+  "page": 27,
+  "width": 1041,
+  "height": 497
+ },
+ "fig4-3-request-reply": {
+  "file": "img/fig4-3-request-reply.png",
+  "figure": "4.3",
+  "caption": "Path of an Engine Speed Request and Its Reply",
+  "page": 30,
+  "width": 1124,
+  "height": 502
+ },
+ "fig5-13-elm327-init": {
+  "file": "img/fig5-13-elm327-init.png",
+  "figure": "5.13",
+  "caption": "Raspberry Pi: ELM327 Initialisation and First Combined OBD and GPS Reading",
+  "page": 48,
+  "width": 1187,
+  "height": 631
+ },
+ "fig5-12-parts": {
+  "file": "img/fig5-12-parts.jpg",
+  "figure": "5.12",
+  "caption": "Parts for the In-Car Unit: Raspberry Pi 4, ESP32 Boards, GPS and CAN Modules",
+  "page": 46,
+  "width": 397,
+  "height": 708
+ },
+ "fig6-2-raw-decoded-packed": {
+  "file": "img/fig6-2-raw-decoded-packed.png",
+  "figure": "6.2",
+  "caption": "Raspberry Pi: Raw Replies, Decoded Values and the Packed 32-Byte Packet",
+  "page": 57,
+  "width": 1187,
+  "height": 629
+ },
+ "fig5-4-board2-gps": {
+  "file": "img/fig5-4-board2-gps.jpg",
+  "figure": "5.4",
+  "caption": "Board 2 with GPS, CAN and GSM Modules",
+  "page": 37,
+  "width": 1166,
+  "height": 518
+ },
+ "fig6-3-pi-forwarding": {
+  "file": "img/fig6-3-pi-forwarding.png",
+  "figure": "6.3",
+  "caption": "Raspberry Pi: Capture Running with Packet Forwarding Enabled",
+  "page": 58,
+  "width": 1187,
+  "height": 629
+ },
+ "fig6-4-laptop-receiver": {
+  "file": "img/fig6-4-laptop-receiver.png",
+  "figure": "6.4",
+  "caption": "Laptop Receiver: Every Packet Decoded and Passing its CRC",
+  "page": 58,
+  "width": 1187,
+  "height": 629
+ },
+ "fig6-5-dashboard-real-rpm": {
+  "file": "img/fig6-5-dashboard-real-rpm.png",
+  "figure": "6.5",
+  "caption": "Dashboard Showing a Real Engine Speed Reading on 14 July",
+  "page": 60,
+  "width": 958,
+  "height": 539
+ }
+}

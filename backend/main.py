@@ -55,6 +55,11 @@ _DRIVE_DIR = Path(__file__).resolve().parent.parent / "demo" / "driver-console"
 if _DRIVE_DIR.is_dir():
     app.mount("/drive", StaticFiles(directory=_DRIVE_DIR, html=True), name="drive")
 
+# "How data flows" page (demo/obd-flow/) at /flow/ -- one value from the ECU to the dashboard
+_FLOW_DIR = Path(__file__).resolve().parent.parent / "demo" / "obd-flow"
+if _FLOW_DIR.is_dir():
+    app.mount("/flow", StaticFiles(directory=_FLOW_DIR, html=True), name="flow")
+
 # ── Run ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

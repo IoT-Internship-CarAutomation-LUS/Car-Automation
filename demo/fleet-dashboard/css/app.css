@@ -133,6 +133,12 @@ button { font: inherit; color: inherit; }
   background: #ffffff; color: var(--shell); border-radius: 999px; padding: 0.2rem 0.7rem; font-size: 0.86rem; font-weight: 650;
 }
 .clock { font-size: 1rem; color: var(--shell-ink); min-width: 5.2ch; text-align: right; }
+.shell-link {
+  color: var(--shell-ink); font-size: 0.93rem; text-decoration: underline; text-underline-offset: 3px;
+  text-decoration-color: rgba(255, 255, 255, 0.5); white-space: nowrap;
+}
+.shell-link:hover { text-decoration-color: #ffffff; }
+.trace-link { text-decoration: none; color: var(--ink); }
 .theme-toggle {
   display: inline-flex; align-items: center; gap: 0.4rem; height: 2.1rem; padding: 0 0.7rem;
   background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 8px; cursor: pointer;

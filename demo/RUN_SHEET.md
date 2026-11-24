@@ -31,6 +31,15 @@ simulator / driver console -> 32-byte packet (pack_packet, CRC-8) -> unpack -> s
 
 Console keys: W or Up = throttle, S or Down = brake, Space or C = clutch, Q / E = gear down / up, I = ignition, X = emergency stop, H = horn. On a phone, drag the pedals with a thumb; they spring back when released.
 
+## The "How data flows" page (/flow/)
+
+http://localhost:8000/flow/ (also linked as **How data flows** in the fleet header, and as **Trace this packet** in every car view). It follows **one value** from the car's ECU to the dashboard tile through 8 stages plus the GPS side branch. Each stage shows what happens, the data at that point, the **real code** from this repo (file and line numbers), and the matching **figure from the internship report** (click to enlarge).
+
+- **Trace:** RPM (0x0C), speed (0x0D), coolant (0x05), throttle (0x11) or fuel (0x2F). **Source:** any car on the fleet, including a console car that joins later.
+- **Pause** holds one packet while you talk. **Report example** freezes on the report's own numbers: `41 0C 0D 2E` → 843.5 rpm (Figures 4.3 and 5.13). **Summary view** puts all eight steps for the value on one screen, which is handy for questions.
+- Keys: Left / Right = previous / next stage, Space = walk through (about 6 s per stage), 1 to 8 = jump.
+- Stages 1 to 4 are rebuilt from each real packet (our cars send packets, not ELM327 text) and say so; stages 5 to 8 show the actual packet. Unsupported values show the honest path: NO DATA → None → FF → null → "Not supported".
+
 ## Backups
 
 - **No second device or the network fails:** open http://localhost:8000/drive/ in a **second browser window** on the same laptop, side by side with the fleet view (Win + Left / Win + Right).
@@ -40,17 +49,22 @@ Console keys: W or Up = throttle, S or Down = brake, Space or C = clutch, Q / E 
 
 ## Suggested 5-minute talk order
 
-1. **(0:00) The problem and the real pipeline, 45 s.** We read a real car (Maruti Fronx) over OBD-II with a Raspberry Pi and GPS, pack each sample into a 32-byte packet with a CRC-8, and stream it to our FastAPI backend. No live cars are allowed today, so only the cars are simulated; the packing, backend and dashboard are the real code.
-2. **(0:45) The fleet view, 60 s.** Five cars on Chennai roads. The **Fronx is real recorded data** (31 July, idling, no GPS, so it is parked at a fixed point); the other four are simulated. Point at the packet ribbon on each card: hatched cells are bytes the car did not report (the Omni reports almost nothing; the Corolla reports everything).
-3. **(1:45) One car in depth, 60 s.** Click the Corolla. Hover the bytes: each one names its field and decoded value, and the CRC is checked again in the browser. Every value is tagged measured, simulated, derived, not supported or not applicable (EV). Show the Veyron's "OBD limit" (speed is one byte, so 254 km/h is the most the wire can carry) and the Roadster's "Not applicable (EV)".
-4. **(2:45) Live driving, 90 s.** Hand the phone to an examiner (QR code). They connect, turn the ignition on and press the throttle; the live car joins the fleet and its numbers move on the projector within a second. Open its car view to show the Driver inputs panel, then press Emergency stop and show the alert.
-5. **(4:15) Alerts and wrap-up, 45 s.** Press P and trigger "Omni overheats" or "Corolla puncture"; the alert appears. Close on what is next: TPMS hardware (the 16-byte packet is already designed and implemented), CAN sniffing for brake/clutch/AC on the real Fronx, and moving the backend to the company cloud.
+The flow page fits best **right after the fleet view and before live driving**: it explains how one number gets onto the screen, so the live drive that follows is understood as the same pipeline, not a trick.
+
+1. **(0:00) The problem and the real pipeline, 40 s.** We read a real car (Maruti Fronx) over OBD-II with a Raspberry Pi and GPS, pack each sample into a 32-byte packet with a CRC-8, and stream it to our FastAPI backend. No live cars are allowed today, so only the cars are simulated; the packing, backend and dashboard are the real code.
+2. **(0:40) The fleet view, 50 s.** Five cars on Chennai roads. The **Fronx is real recorded data** (31 July, idling, no GPS, so it is parked at a fixed point); the other four are simulated. Point at the packet ribbon: hatched cells are bytes the car did not report (the Omni reports almost nothing; the Corolla reports everything). Click the Corolla, hover two bytes, show the provenance tags.
+3. **(1:30) How data flows, 75 s.** From the car view press **Trace this packet** (or open /flow/). Press **Report example**: stage 2 (the CAN request and reply, report Figure 4.3), stage 4 (`41 0C 0D 2E` → ((0x0D × 256) + 0x2E) / 4 = 843.5 rpm), stage 5 (the 32 bytes and the CRC), stage 7 (the backend stores and fans out). Each stage shows our real code and the report figure. Switch Trace to Fuel on the Fronx for the honest "Not supported" path.
+4. **(2:45) Live driving, 75 s.** Hand the phone to an examiner (QR code, press P). They connect, turn the ignition on and press the throttle; the live car joins the fleet within a second. Optionally pick it as the Source on /flow/ to show its packets passing through the same stages. Press Emergency stop and show the alert.
+5. **(4:00) Alerts and wrap-up, 60 s.** Press P and trigger "Omni overheats" or "Corolla puncture"; the alert appears. Close on what is next: TPMS hardware (the 16-byte packet is already designed and implemented), CAN sniffing for brake/clutch/AC on the real Fronx, and moving the backend to the company cloud. Keep the /flow/ **Summary view** ready for questions.
 
 ## Checks (developer)
 
 ```
 python demo/tests/verify_dashboard.py                 # Level 1, demo running
 python demo/tests/verify_level2.py                    # Level 2 + map/card sizes, demo running
+python demo/tests/verify_flow.py                      # /flow/ page, demo running
+python demo/tests/test_flow_roundtrip.py              # reconstruction round trip (no browser)
+python demo/obd-flow/build_snippets.py                # re-extract the code shown on /flow/ (--check to verify)
 python backend/tests/dry_run.py                       # 74 checks (add --stream with port 8000 free)
 python backend/tpms_codec.py ; python backend/obd_decoder.py
 ```
