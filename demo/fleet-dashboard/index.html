@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Car Automation - Fleet Telemetry</title>
+  <meta name="description" content="Fleet telemetry dashboard for the LUS IoT internship: five cars through the real 32-byte packet pipeline.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230c5a43'/%3E%3Crect x='10' y='5' width='12' height='22' rx='5' fill='white'/%3E%3Crect x='12' y='10' width='8' height='4' rx='1.5' fill='%230c5a43'/%3E%3C/svg%3E">
+  <script>
+    // Apply the saved theme before first paint (no flash). Storage may be blocked: ignore.
+    (function () { try { var t = localStorage.getItem("ft-theme"); if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t); } catch (e) {} })();
+  </script>
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="vendor/uplot/uPlot.min.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+      <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.2v.3"/></symbol>
+      <symbol id="i-crit" viewBox="0 0 24 24"><path d="M8.2 3h7.6L21 8.2v7.6L15.8 21H8.2L3 15.8V8.2z"/><path d="M12 7.5v5.5M12 16.2v.3"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.7 2.7L16.2 9.5"/></symbol>
+      <symbol id="i-unknown" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.7.3-1 .9-1 1.6v.4M12 16.8v.3"/></symbol>
+      <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5M6.5 8h11v3a5.5 5.5 0 0 1-11 0zM12 16.5V21"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+      <symbol id="i-compass" viewBox="0 0 24 24"><path d="M12 3l6.5 17L12 16l-6.5 4z" style="fill:currentColor"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.8v.3"/></symbol>
+      <symbol id="car-top" viewBox="0 0 22 36">
+        <rect x="1.5" y="1.5" width="19" height="33" rx="7" style="fill:var(--car, #5f6d79);stroke:var(--car-edge, #fff)" stroke-width="1.6"/>
+        <rect x="4.5" y="9" width="13" height="6.5" rx="2.2" style="fill:rgba(255,255,255,0.8)"/>
+        <rect x="5" y="25" width="12" height="4.5" rx="1.8" style="fill:rgba(255,255,255,0.8)"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <header class="shell">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="rgba(255,255,255,0.14)"/><rect x="10" y="5" width="12" height="22" rx="5" fill="#fff"/><rect x="12" y="10" width="8" height="4" rx="1.5" fill="#0c5a43"/><rect x="12.5" y="20" width="7" height="2.6" rx="1" fill="#0c5a43"/></svg>
+      <div class="brand-text"><strong>Car Automation - Fleet Telemetry</strong><span>LUS IoT Internship</span></div>
+    </div>
+    <span class="shell-item standalone-badge" id="standalone-badge" hidden title="No backend: an in-browser simulator is producing the same JSON, through a JavaScript port of pack_packet and CRC-8">Standalone mode</span>
+    <span class="shell-item demo-badge" id="demo-badge" title="How many cars are replaying real recorded data versus simulated">Demo data: waiting</span>
+    <span class="shell-item link" id="link" data-state="connecting"><span class="link-dot" aria-hidden="true"></span><span class="link-text" id="link-text">Connecting</span></span>
+    <span class="shell-item clock num" id="clock" aria-label="Local time">--:--:--</span>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark theme">
+      <svg class="icon"><use href="#i-moon"/></svg><span id="theme-label">Dark</span>
+    </button>
+  </header>
+
+  <!-- FLEET VIEW -->
+  <main class="fleet" id="view-fleet" aria-label="Fleet view">
+    <section class="kpis" aria-label="Fleet summary">
+      <div class="kpi"><span class="kpi-value num" id="kpi-online">0</span><span class="kpi-of num" id="kpi-online-of">of 0</span><span class="kpi-label">Cars online</span></div>
+      <div class="kpi"><span class="kpi-value num" id="kpi-moving">0</span><span class="kpi-label">Moving</span></div>
+      <div class="kpi" id="kpi-alerts-wrap"><span class="kpi-value num" id="kpi-alerts">0</span><span class="kpi-label">Active alerts</span></div>
+      <div class="kpi"><span class="kpi-value num" id="kpi-pps">0.0</span><span class="kpi-label">Packets / second</span></div>
+      <div class="kpi"><span class="kpi-value num" id="kpi-crc">--</span><span class="kpi-label" title="Every packet's CRC-8 is checked again in the browser">CRC-8 pass</span></div>
+    </section>
+
+    <div class="fleet-grid">
+      <aside class="column" aria-labelledby="veh-h">
+        <div class="column-head"><h2 id="veh-h">Vehicles</h2><span class="sub" id="veh-sub">Click a car for full telemetry</span></div>
+        <div class="scroll"><ol class="vlist" id="vlist"></ol></div>
+      </aside>
+
+      <section class="column map-col" aria-label="Fleet map">
+        <div class="map-holder"><div id="fleet-map"></div><div class="map-legend" id="map-legend"></div></div>
+      </section>
+
+      <aside class="column" aria-labelledby="alert-h">
+        <div class="column-head"><h2 id="alert-h">Alerts</h2><span class="sub" id="alert-sub">Newest first</span></div>
+        <div class="scroll" aria-live="polite"><ol class="feed" id="feed"></ol>
+          <div class="empty" id="feed-empty"><strong>No alerts yet</strong>Coolant, tyres, speed, battery, MIL, packet loss, CRC and stale data are checked on every packet. Press <span class="kbd">P</span> for presenter scenarios.</div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- CAR VIEW -->
+  <main class="car" id="view-car" hidden aria-label="Car view">
+    <div class="car-head">
+      <button class="back" id="back" type="button"><svg class="icon"><use href="#i-back"/></svg>Fleet</button>
+      <svg class="car-glyph" id="car-glyph" aria-hidden="true"><use href="#car-top"/></svg>
+      <h1 id="car-name">Car</h1><span class="year num" id="car-year"></span>
+      <span class="plate" id="car-plate"></span>
+      <span class="tag" id="car-power"></span>
+      <span class="tag" id="car-mode"></span>
+      <span class="status" id="car-status" data-s="waiting">Waiting</span>
+      <span class="age">Last packet <span class="num" id="car-age">--</span></span>
+    </div>
+
+    <section class="panel" aria-labelledby="wire-h">
+      <div class="panel-head"><h2 id="wire-h">On the wire</h2><span class="fresh" id="fresh-wire"></span>
+        <span class="ph-right sub" style="font-size:.86rem;color:var(--ink-3)">Hover a byte to see its field and decoded value</span></div>
+      <div class="wire">
+        <div class="wire-block"><h3>32-byte vehicle packet <span class="num" id="wire-seq"></span><span class="crc-state" id="crc32"></span></h3>
+          <div class="bytes b32" id="bytes32"></div><div class="byte-labels b32" id="labels32"></div></div>
+        <div class="wire-block"><h3>16-byte TPMS packet <span class="crc-state" id="crc16"></span></h3>
+          <div class="bytes b16" id="bytes16"></div><div class="byte-labels b16" id="labels16"></div></div>
+      </div>
+      <div class="wire-legend" id="wire-legend"></div>
+    </section>
+
+    <div class="car-grid">
+      <div class="stack">
+        <section class="panel" aria-labelledby="g-h">
+          <div class="panel-head"><h2 id="g-h">Engine and speed</h2><span class="fresh" id="fresh-gauges"></span></div>
+          <div class="gauges" id="gauges"></div>
+          <div class="gear-row" id="gear-row"></div>
+          <div class="obd-limit" id="obd-limit" hidden><svg class="icon"><use href="#i-warn"/></svg>
+            <span><strong>At the OBD limit.</strong> PID 0x0D is one byte, so 254 km/h is the most the wire can carry. Real speed may be higher.</span></div>
+        </section>
+        <section class="panel" aria-labelledby="t-h">
+          <div class="panel-head"><h2 id="t-h">Last 2 minutes</h2></div>
+          <div class="trend"><div class="trend-title"><span id="trend-rpm-label">RPM</span><span class="num" id="trend-rpm-now"></span></div><div id="chart-rpm"></div></div>
+          <div class="trend"><div class="trend-title"><span>Speed, km/h</span><span class="num" id="trend-spd-now"></span></div><div id="chart-spd"></div></div>
+        </section>
+      </div>
+
+      <div class="stack">
+        <section class="panel" aria-labelledby="v-h">
+          <div class="panel-head"><h2 id="v-h">Vehicle fields</h2><span class="fresh" id="fresh-vehicle"></span><span class="ph-right" id="prov-vehicle"></span></div>
+          <div class="tiles" id="tiles"></div>
+        </section>
+        <section class="panel" aria-labelledby="c-h">
+          <div class="panel-head"><h2 id="c-h">CAN body signals</h2><span class="fresh" id="fresh-can"></span></div>
+          <div class="tri-list" id="tri"></div>
+        </section>
+        <section class="panel" aria-labelledby="cg-h">
+          <div class="panel-head"><h2 id="cg-h">Cabin and GSM</h2><span class="fresh" id="fresh-cabin"></span></div>
+          <div class="pairs" id="cabin"></div>
+        </section>
+      </div>
+
+      <div class="stack">
+        <section class="panel" aria-labelledby="gps-h">
+          <div class="panel-head"><h2 id="gps-h">GPS</h2><span class="fresh" id="fresh-gps"></span><span class="ph-right" id="prov-gps"></span></div>
+          <div class="gps-map"><div id="car-map"></div></div>
+          <div class="gps-facts" id="gps-facts"></div>
+        </section>
+        <section class="panel" aria-labelledby="ty-h">
+          <div class="panel-head"><h2 id="ty-h">Tyres (TPMS)</h2><span class="fresh" id="fresh-tyres"></span><span class="ph-right" id="prov-tyres"></span></div>
+          <div class="tpms" id="tpms"></div>
+        </section>
+        <section class="panel" aria-labelledby="h-h">
+          <div class="panel-head"><h2 id="h-h">Data health</h2></div>
+          <div class="health" id="health"></div>
+          <div class="fresh-list" id="fresh-list"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <!-- PRESENTER (toggle with P) -->
+  <aside class="presenter" id="presenter" hidden aria-labelledby="pres-h">
+    <button class="p-close" id="p-close" type="button" aria-label="Close presenter panel"><svg class="icon"><use href="#i-close"/></svg></button>
+    <h2 id="pres-h">Presenter scenarios</h2>
+    <p>Sent as <span class="num">demo_control</span> through the backend to the simulator. <span class="kbd">P</span> hides this panel.</p>
+    <div class="p-grid">
+      <button class="pbtn" data-scenario="omni_overheat" type="button">Omni overheats <small>coolant past 110 °C</small></button>
+      <button class="pbtn" data-scenario="corolla_puncture" type="button">Corolla puncture <small>front-left below 150 kPa</small></button>
+      <button class="pbtn" data-scenario="mil_on" type="button">Corolla check-engine <small>MIL on, 2 codes</small></button>
+      <div class="p-row">
+        <select id="p-offline-car" aria-label="Car to take offline"></select>
+        <button class="pbtn" data-scenario="car_offline" type="button">Go offline <small>15 s</small></button>
+      </div>
+      <button class="pbtn" data-scenario="reset_all" type="button">Reset all <small>clear every scenario</small></button>
+    </div>
+    <div class="p-sent" id="p-sent" role="status"></div>
+  </aside>
+
+  <div id="tooltip" role="tooltip" hidden></div>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="vendor/uplot/uPlot.iife.min.js"></script>
+  <script src="js/codec.js"></script>
+  <script src="js/demo-data.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/standalone.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/fleet.js"></script>
+  <script src="js/car.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
