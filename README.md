@@ -62,7 +62,7 @@ Data travels as a **compact 32-byte binary packet** on the hardware link, and is
 
 | Folder | What's in it |
 |--------|--------------|
-| `docs/` | Planning docs, message schema, parts list, daily reports |
+| `docs/` | Planning docs, message schema, parts list, daily reports (`day-reports/` is kept as history; the automated daily-digest workflow was retired after the internship) |
 | `dashboard-telemetry/` | Dashboard 1 — real-car telemetry monitor |
 | `dashboard-control/` | Dashboard 2 — vehicle control console. **Retired** along with the self-built platform track; no longer receives data |
 | `backend/` | Streaming API + storage (FastAPI + SQLite, deployed at api.nalusa.space) plus the real-vehicle acquisition scripts (`elm327_bt.py` runs on the Raspberry Pi, `obd_decoder.py` packs/unpacks the 32-byte packet) |
