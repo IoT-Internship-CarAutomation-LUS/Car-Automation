@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>3D view - Car Automation</title>
+  <meta name="description" content="A live 3D view of any car in the fleet, driven entirely by its telemetry: wheel speed, brake lights, body motion, tyre pressures and where our hardware sits.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230c5a43'/%3E%3Cpath d='M6 19l3-6h14l3 6v4H6z' fill='white'/%3E%3Ccircle cx='11' cy='23' r='2.6' fill='%230c5a43' stroke='white' stroke-width='1.6'/%3E%3Ccircle cx='21' cy='23' r='2.6' fill='%230c5a43' stroke='white' stroke-width='1.6'/%3E%3C/svg%3E">
+  <script>
+    (function () { try { var t = localStorage.getItem("ft-theme"); if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t); } catch (e) {} })();
+  </script>
+  <link rel="stylesheet" href="../fleet/css/app.css">
+  <link rel="stylesheet" href="css/view3d.css">
+  <link rel="modulepreload" href="vendor/three/three.core.min.js">
+  <link rel="modulepreload" href="vendor/three/three.module.min.js">
+</head>
+<body class="v3p">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+      <symbol id="car-top" viewBox="0 0 22 36">
+        <rect x="1.5" y="1.5" width="19" height="33" rx="7" style="fill:var(--car, #5f6d79);stroke:var(--car-edge, #fff)" stroke-width="1.6"/>
+        <rect x="4.5" y="9" width="13" height="6.5" rx="2.2" style="fill:rgba(255,255,255,0.8)"/>
+        <rect x="5" y="25" width="12" height="4.5" rx="1.8" style="fill:rgba(255,255,255,0.8)"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <header class="shell">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="rgba(255,255,255,0.14)"/><path d="M6 19l3-6h14l3 6v4H6z" fill="#fff"/><circle cx="11" cy="23" r="2.6" fill="#0c5a43" stroke="#fff" stroke-width="1.6"/><circle cx="21" cy="23" r="2.6" fill="#0c5a43" stroke="#fff" stroke-width="1.6"/></svg>
+      <div class="brand-text"><strong>Car Automation - 3D view</strong><span>One car, moved only by its telemetry</span></div>
+    </div>
+    <span class="shell-item standalone-badge" id="standalone-badge" hidden>Standalone mode</span>
+    <span class="shell-item link" id="link" data-state="connecting"><span class="link-dot" aria-hidden="true"></span><span class="link-text" id="link-text">Connecting</span></span>
+    <a class="shell-link" href="../fleet/">Fleet dashboard</a>
+    <a class="shell-link" href="../flow/">How data flows</a>
+    <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark theme"><svg class="icon"><use href="#i-moon"/></svg><span>Dark</span></button>
+  </header>
+
+  <nav class="v3p-bar" aria-label="Choose a car">
+    <span class="bar-label" id="pick-label">Car</span>
+    <div class="v3p-picker" id="picker" role="group" aria-labelledby="pick-label"></div>
+    <span class="bar-note" id="bar-note">Number keys pick a car</span>
+  </nav>
+
+  <main class="v3p-stage" id="stage" aria-label="3D view">
+    <h1 class="visually-hidden">Live 3D view of a fleet car</h1>
+  </main>
+
+  <script src="../fleet/js/codec.js"></script>
+  <script src="../fleet/js/demo-data.js"></script>
+  <script src="../fleet/js/ui.js"></script>
+  <script src="../fleet/js/standalone.js"></script>
+  <script src="../fleet/js/app.js"></script>
+  <script type="module" src="js/page.js"></script>
+</body>
+</html>

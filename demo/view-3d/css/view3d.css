@@ -1,0 +1,192 @@
+/* 3D view -- shares tokens, shell, pills, tags and plates with ../fleet/css/app.css.
+   .v3d-* is the view module (used by /3d/ and embedded in the fleet car view);
+   .v3p-* is the /3d/ page around it. Nothing here touches the fleet's own classes. */
+
+/* ---------- the view ---------- */
+.v3d, .v3d-stage { position: relative; width: 100%; height: 100%; }
+.v3d-stage { overflow: hidden; background: var(--ground); border-radius: inherit; isolation: isolate; }
+.v3d-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; outline: none; }
+
+/* readout: a resting card over the canvas (ambient shadow, never stronger) */
+.v3d-readout {
+  position: absolute; top: 1rem; left: 1rem; z-index: 3; width: 21.5rem; max-width: calc(100% - 2rem);
+  display: flex; flex-direction: column; gap: 0.7rem; padding: 0.85rem 1rem 0.8rem;
+  background: color-mix(in oklab, var(--surface) 95%, transparent); border-radius: 12px; box-shadow: var(--shadow);
+}
+.r-id { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 0.65rem; }
+.r-id .car-glyph { width: 1.25rem; height: 2rem; margin-top: 0.1rem; }
+.r-name { font-size: 1.2rem; line-height: 1.25; }
+.r-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.45rem; margin-top: 0.3rem; }
+.r-sub .plate { height: 1.35rem; }
+.r-body { font-size: 0.86rem; color: var(--ink-3); }
+.r-mode { display: inline-flex; }
+.r-id .status { margin-top: 0.2rem; }
+
+.r-main { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.75rem; align-items: stretch; }
+.r-speed {
+  display: flex; flex-direction: column; justify-content: center; align-items: flex-start; min-width: 7.2rem;
+  padding: 0.45rem 0.75rem 0.5rem; background: var(--surface-2); border-radius: 8px;
+}
+.r-speed-v { font-size: 3.1rem; font-weight: 600; line-height: 1; }
+.r-speed-v.is-null { font-family: var(--font-ui); font-size: 1rem; font-weight: 500; color: var(--muted-state); line-height: 1.3; }
+.r-unit { font-size: 0.86rem; color: var(--ink-3); margin-top: 0.15rem; }
+.r-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem 0.7rem; margin: 0; align-content: center; }
+.r-grid > div { min-width: 0; }
+.r-grid dt { font-size: 0.82rem; color: var(--ink-3); }
+.r-grid dd { margin: 0.05rem 0 0; font-size: 1.15rem; font-weight: 600; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.r-grid dd.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.r-grid dd.is-null { font-family: var(--font-ui); font-size: 0.93rem; font-weight: 500; color: var(--muted-state); white-space: normal; }
+
+.r-k { font-size: 0.86rem; font-weight: 600; color: var(--ink-2); }
+.r-brake { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem 0.5rem; }
+.r-brake .pill { align-self: center; }
+.r-brake .pill[data-v="unknown"] { font-family: var(--font-ui); font-weight: 600; }
+.r-brake-note { font-size: 0.86rem; color: var(--ink-3); }
+.r-null { font-size: 0.93rem; font-weight: 500; color: var(--muted-state); }
+
+.r-pedals { display: grid; gap: 0.3rem; }
+.r-ped { display: grid; grid-template-columns: 4.6rem minmax(0, 1fr) 2.8rem; align-items: center; gap: 0.5rem; font-size: 0.86rem; color: var(--ink-2); }
+.r-ped .num { text-align: right; color: var(--ink); font-size: 0.9rem; }
+.r-bar { height: 0.55rem; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.r-bar i { display: block; height: 100%; width: 0; border-radius: inherit; transition: width 180ms linear; }
+.r-ped[data-k="throttle"] i { background: var(--good); }
+.r-ped[data-k="brake"] i { background: var(--critical); }
+.r-ped[data-k="clutch"] i { background: var(--s1); }
+
+.r-tyres { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
+.r-tyres .r-k { margin-right: 0.15rem; }
+.r-tyre {
+  display: inline-flex; align-items: center; gap: 0.25rem; height: 1.6rem; padding: 0 0.45rem; border-radius: 6px;
+  background: var(--surface-2); font-size: 0.86rem; color: var(--ink);
+}
+.r-tyre b { font-size: 0.78rem; font-weight: 650; color: var(--ink-3); }
+.r-tyre .icon { width: 0.95rem; height: 0.95rem; }
+.r-tyre[data-s="amber"] { background: var(--warning-soft); color: var(--warning-ink); }
+.r-tyre[data-s="red"] { background: var(--critical-soft); color: var(--critical-ink); }
+.r-tyre[data-s="red"] b, .r-tyre[data-s="amber"] b { color: inherit; }
+.r-tyres .r-unit { margin: 0 0 0 0.1rem; }
+
+.r-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding-top: 0.6rem; border-top: 1px solid var(--line); font-size: 0.86rem; color: var(--ink-2); }
+.r-age { color: var(--ink); font-family: var(--font-ui); font-variant-numeric: tabular-nums; }
+
+/* dock: camera presets and the hardware toggle */
+.v3d-dock { position: absolute; right: 1rem; bottom: 1rem; z-index: 3; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; justify-content: flex-end; }
+.v3d-presets { display: inline-flex; gap: 0; background: var(--surface); border-radius: 8px; box-shadow: var(--shadow); }
+.v3d-btn {
+  display: inline-flex; align-items: center; gap: 0.45rem; height: 2.4rem; padding: 0 0.8rem;
+  border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); border-radius: 8px;
+  font: 600 0.93rem var(--font-ui); cursor: pointer; transition: background-color 140ms ease, border-color 140ms ease;
+}
+.v3d-btn:hover { background: var(--surface-2); }
+.v3d-btn .kbd { font-weight: 500; color: var(--ink-3); border-color: var(--line); }
+.v3d-btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.v3d-btn[aria-pressed="true"] .kbd { color: inherit; border-color: color-mix(in oklab, var(--surface) 55%, transparent); }
+.v3d-presets .v3d-btn { border-radius: 0; margin-left: -1px; }
+.v3d-presets .v3d-btn:first-child { border-radius: 8px 0 0 8px; margin-left: 0; }
+.v3d-presets .v3d-btn:last-child { border-radius: 0 8px 8px 0; }
+.v3d-presets .v3d-btn[aria-pressed="true"] { position: relative; z-index: 1; }
+.v3d-xray { box-shadow: var(--shadow); }
+.v3d-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; position: relative; z-index: 2; }
+
+.v3d-keys { position: absolute; left: 1rem; bottom: 1rem; z-index: 2; margin: 0; font-size: 0.86rem; color: var(--ink-2); }
+.v3d-keys .kbd { color: var(--ink); }
+
+/* waiting / no WebGL */
+.v3d-wait, .v3d-msg {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 4; max-width: min(30rem, calc(100% - 2rem));
+  display: flex; flex-direction: column; gap: 0.3rem; padding: 0.9rem 1.1rem; text-align: left;
+  background: var(--surface); border-radius: 12px; box-shadow: var(--shadow); color: var(--ink-2); font-size: 0.93rem;
+}
+.v3d-wait strong, .v3d-msg strong { color: var(--ink); font-size: 1.02rem; }
+.v3d-msg { flex-direction: row; gap: 0.7rem; align-items: flex-start; }
+.v3d-msg > div { display: flex; flex-direction: column; gap: 0.25rem; }
+.v3d-msg > .icon { color: var(--warning-ink); width: 1.4rem; height: 1.4rem; margin-top: 0.1rem; }
+.v3d-readout + .v3d-wait { top: auto; bottom: 4.5rem; transform: translateX(-50%); }
+
+/* tyre tooltip, same look as the fleet tooltip */
+.v3d-tip {
+  position: absolute; left: 0; top: 0; z-index: 6; pointer-events: none; min-width: 12rem; max-width: 17rem;
+  padding: 0.55rem 0.7rem; border-radius: 8px; background: var(--ink); color: var(--surface);
+  font-size: 0.86rem; line-height: 1.4; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+.v3d-tip .tt-title { display: flex; align-items: center; gap: 0.3rem; font-weight: 650; margin-bottom: 0.15rem; }
+.v3d-tip .tt-row { display: flex; justify-content: space-between; gap: 1rem; }
+.v3d-tip .tt-row span:first-child { opacity: 0.72; }
+.v3d-tip .tt-state { margin-top: 0.25rem; font-weight: 600; }
+.v3d-tip .icon { width: 1rem; height: 1rem; }
+
+/* hardware X-ray labels: links into /flow/ */
+.v3d-hwlayer { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.v3d-leaders { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.v3d-leaders line { stroke: var(--accent); stroke-width: 1.5; }
+.v3d-leaders circle { fill: var(--accent); stroke: var(--surface); stroke-width: 1.5; }
+.v3d-hw {
+  position: absolute; left: 0; top: 0; pointer-events: auto; display: flex; flex-direction: column; gap: 0.05rem;
+  max-width: 15rem; padding: 0.4rem 0.6rem 0.45rem; border-radius: 8px; text-decoration: none;
+  background: var(--surface); color: var(--ink); border: 1px solid color-mix(in oklab, var(--accent) 55%, transparent); box-shadow: var(--shadow);
+}
+.v3d-hw:hover { background: var(--accent-soft); }
+.hw-name { font-weight: 650; font-size: 0.93rem; }
+.hw-sub { font-size: 0.82rem; color: var(--ink-2); }
+.hw-stage { font-size: 0.82rem; font-weight: 600; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: color-mix(in oklab, var(--accent) 45%, transparent); }
+.v3d-hwnote {
+  position: absolute; left: 50%; top: 1rem; transform: translateX(-50%); z-index: 3; margin: 0;
+  display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.4rem 0.75rem; border-radius: 8px; max-width: calc(100% - 2rem);
+  background: color-mix(in oklab, var(--surface) 94%, transparent); box-shadow: var(--shadow); font-size: 0.86rem; color: var(--ink-2);
+}
+.v3d-hwnote .icon { color: var(--accent); }
+.v3d:not(.v3d-compact) .v3d-hwnote { left: auto; right: 1rem; transform: none; max-width: 30rem; }
+
+/* embedded in the car view: the panel already names the car, so the readout is a strip */
+.v3d-compact .v3d-readout { top: 0.6rem; left: 0.6rem; width: auto; max-width: calc(100% - 1.2rem); gap: 0.45rem; padding: 0.55rem 0.7rem 0.5rem; }
+.v3d-compact .r-id, .v3d-compact .r-grid [data-k="heading"] { display: none; }
+.v3d-compact .r-main { gap: 0.6rem; }
+.v3d-compact .r-speed { min-width: 5.4rem; padding: 0.3rem 0.55rem 0.35rem; }
+.v3d-compact .r-speed-v { font-size: 2.1rem; }
+.v3d-compact .r-grid { grid-template-columns: repeat(3, auto); gap: 0.1rem 0.9rem; }
+.v3d-compact .r-grid dd { font-size: 1.02rem; }
+.v3d-compact .r-foot { padding-top: 0.4rem; }
+.v3d-compact .r-ped { grid-template-columns: 4rem 6rem 2.6rem; }
+.v3d-compact .v3d-dock { right: 0.6rem; bottom: 0.6rem; gap: 0.4rem; }
+.v3d-compact .v3d-btn { height: 2.1rem; padding: 0 0.6rem; font-size: 0.86rem; }
+.v3d-compact .v3d-btn .kbd { display: none; }
+.v3d-compact .v3d-hw { max-width: 11rem; padding: 0.3rem 0.45rem; }
+.v3d-compact .hw-sub { display: none; }
+.v3d-compact .v3d-hwnote { top: auto; bottom: 3.4rem; right: 0.6rem; left: auto; transform: none; max-width: 22rem; }
+
+@media (prefers-reduced-motion: reduce) { .r-bar i { transition: none; } }
+
+/* ---------- the /3d/ page ---------- */
+.v3p { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+html:has(body.v3p) { font-size: 15px; }
+@media (min-width: 1700px) { html:has(body.v3p) { font-size: 17px; } }
+.v3p .shell { position: relative; flex: none; }
+.v3p-bar {
+  flex: none; display: flex; align-items: center; gap: 0.6rem 0.9rem; flex-wrap: wrap;
+  padding: 0.55rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.v3p-bar .bar-label { font-size: 0.93rem; font-weight: 600; color: var(--ink-2); }
+.v3p-picker { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+.v3p-car {
+  display: inline-flex; align-items: center; gap: 0.5rem; height: 2.4rem; padding: 0 0.8rem 0 0.6rem;
+  border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--ink);
+  font: 600 0.93rem var(--font-ui); cursor: pointer; transition: background-color 140ms ease, border-color 140ms ease;
+}
+.v3p-car:hover { background: var(--surface-2); }
+.v3p-car[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+.v3p-car .car-glyph { width: 0.85rem; height: 1.4rem; }
+.v3p-car .tag { height: 1.25rem; }
+.v3p-car .kbd { color: var(--ink-3); font-weight: 500; }
+.v3p-car.is-offline { color: var(--ink-3); }
+.v3p-bar .bar-note { margin-left: auto; font-size: 0.86rem; color: var(--ink-3); }
+.v3p-stage { position: relative; flex: 1; min-height: 0; }
+.v3p-empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink-3); }
+
+/* ---------- embedded in the fleet car view ("3D view" in Engine and speed) ---------- */
+.panel.is-3d .gauges, .panel.is-3d .gear-row { display: none; }
+.g3d-host { height: clamp(17rem, 36vh, 25rem); border-radius: 8px; overflow: hidden; }
+.g3d-host .v3d-stage { border-radius: 8px; }
+.g3d-host.is-msg { height: auto; overflow: visible; margin-bottom: 0.6rem; }
+.g3d-host.is-msg .v3d, .g3d-host.is-msg .v3d-stage { height: auto; background: none; }
+.g3d-host.is-msg .v3d-msg { position: static; transform: none; max-width: none; box-shadow: none; background: var(--surface-2); padding: 0.6rem 0.8rem; }
+.g3d-toggle[aria-pressed="true"] { background: var(--surface-2); border-color: var(--line-strong); }

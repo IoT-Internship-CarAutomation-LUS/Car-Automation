@@ -60,6 +60,11 @@ _FLOW_DIR = Path(__file__).resolve().parent.parent / "demo" / "obd-flow"
 if _FLOW_DIR.is_dir():
     app.mount("/flow", StaticFiles(directory=_FLOW_DIR, html=True), name="flow")
 
+# Level 3 3D view (demo/view-3d/) at /3d/ -- one car, moved only by its telemetry (three.js, vendored)
+_VIEW3D_DIR = Path(__file__).resolve().parent.parent / "demo" / "view-3d"
+if _VIEW3D_DIR.is_dir():
+    app.mount("/3d", StaticFiles(directory=_VIEW3D_DIR, html=True), name="view3d")
+
 # ── Run ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

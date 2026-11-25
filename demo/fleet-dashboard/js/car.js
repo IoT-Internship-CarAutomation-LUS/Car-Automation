@@ -604,11 +604,12 @@
     },
     open(id) {
       current = id; built = null;
+      if (FT.Embed3D) FT.Embed3D.follow(id);     // Level 3: an open 3D view follows the car
       const car = S.cars[id];
       if (car && car.msg) update(); else waiting();
       setTimeout(() => { resizeCharts(); map && map.invalidateSize(); }, 30);
     },
-    close() { current = null; FT.hideTip(); },
+    close() { current = null; FT.hideTip(); if (FT.Embed3D) FT.Embed3D.close(); },
     retheme() {
       if (tiles) tiles.rebuild();
       if (current && S.cars[current] && S.cars[current].msg) { buildCharts(); trail && trail.setStyle({ color: FT.cssVar(`--s${FT.slotFor(current)}`) }); update(); }

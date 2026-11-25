@@ -45,6 +45,7 @@
     <span class="shell-item standalone-badge" id="standalone-badge" hidden title="No backend: an in-browser simulator is producing the same JSON, through a JavaScript port of pack_packet and CRC-8">Standalone mode</span>
     <span class="shell-item demo-badge" id="demo-badge" title="How many cars are replaying real recorded data versus simulated">Demo data: waiting</span>
     <a class="shell-link" href="../flow/">How data flows</a>
+    <a class="shell-link" href="../3d/">3D</a>
     <span class="shell-item link" id="link" data-state="connecting"><span class="link-dot" aria-hidden="true"></span><span class="link-text" id="link-text">Connecting</span></span>
     <span class="shell-item clock num" id="clock" aria-label="Local time">--:--:--</span>
     <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark theme">
@@ -140,7 +141,9 @@
     <div class="car-grid">
       <div class="stack">
         <section class="panel" aria-labelledby="g-h">
-          <div class="panel-head"><h2 id="g-h">Engine and speed</h2><span class="fresh" id="fresh-gauges"></span></div>
+          <div class="panel-head"><h2 id="g-h">Engine and speed</h2><span class="fresh" id="fresh-gauges"></span>
+            <span class="ph-right"><button class="back g3d-toggle" id="g-3d" type="button" aria-pressed="false" aria-controls="g3d-host" title="Swap the gauges for a live 3D view of this car">3D view</button></span></div>
+          <div class="g3d-host" id="g3d-host" hidden></div>
           <div class="gauges" id="gauges"></div>
           <div class="gear-row" id="gear-row"></div>
           <div class="obd-limit" id="obd-limit" hidden><svg class="icon"><use href="#i-warn"/></svg>
@@ -227,6 +230,7 @@
   <script src="js/app.js"></script>
   <script src="js/fleet.js"></script>
   <script src="js/car.js"></script>
+  <script src="js/embed3d.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>
