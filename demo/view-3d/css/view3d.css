@@ -33,7 +33,7 @@
 .r-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem 0.7rem; margin: 0; align-content: center; }
 .r-grid > div { min-width: 0; }
 .r-grid dt { font-size: 0.82rem; color: var(--ink-3); }
-.r-grid dd { margin: 0.05rem 0 0; font-size: 1.15rem; font-weight: 600; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.r-grid dd { margin: 0.05rem 0 0; font-size: 1.25rem; font-weight: 600; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .r-grid dd.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
 .r-grid dd.is-null { font-family: var(--font-ui); font-size: 0.93rem; font-weight: 500; color: var(--muted-state); white-space: normal; }
 
@@ -46,7 +46,7 @@
 
 .r-pedals { display: grid; gap: 0.3rem; }
 .r-ped { display: grid; grid-template-columns: 4.6rem minmax(0, 1fr) 2.8rem; align-items: center; gap: 0.5rem; font-size: 0.86rem; color: var(--ink-2); }
-.r-ped .num { text-align: right; color: var(--ink); font-size: 0.9rem; }
+.r-ped .num { text-align: right; color: var(--ink); font-size: 0.93rem; }
 .r-bar { height: 0.55rem; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
 .r-bar i { display: block; height: 100%; width: 0; border-radius: inherit; transition: width 180ms linear; }
 .r-ped[data-k="throttle"] i { background: var(--good); }
@@ -59,7 +59,7 @@
   display: inline-flex; align-items: center; gap: 0.25rem; height: 1.6rem; padding: 0 0.45rem; border-radius: 6px;
   background: var(--surface-2); font-size: 0.86rem; color: var(--ink);
 }
-.r-tyre b { font-size: 0.78rem; font-weight: 650; color: var(--ink-3); }
+.r-tyre b { font-size: 0.82rem; font-weight: 650; color: var(--ink-3); }
 .r-tyre .icon { width: 0.95rem; height: 0.95rem; }
 .r-tyre[data-s="amber"] { background: var(--warning-soft); color: var(--warning-ink); }
 .r-tyre[data-s="red"] { background: var(--critical-soft); color: var(--critical-ink); }
@@ -88,7 +88,11 @@
 .v3d-xray { box-shadow: var(--shadow); }
 .v3d-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; position: relative; z-index: 2; }
 
-.v3d-keys { position: absolute; left: 1rem; bottom: 1rem; z-index: 2; margin: 0; font-size: 0.86rem; color: var(--ink-2); }
+.v3d-keys {
+  position: absolute; left: 1rem; bottom: 1rem; z-index: 2; margin: 0; padding: 0.3rem 0.6rem; border-radius: 8px;
+  background: color-mix(in oklab, var(--surface) 88%, transparent); font-size: 0.86rem; color: var(--ink-2);
+}
+.v3d.is-xray .v3d-keys { display: none; }
 .v3d-keys .kbd { color: var(--ink); }
 
 /* waiting / no WebGL */
@@ -135,7 +139,7 @@
   background: color-mix(in oklab, var(--surface) 94%, transparent); box-shadow: var(--shadow); font-size: 0.86rem; color: var(--ink-2);
 }
 .v3d-hwnote .icon { color: var(--accent); }
-.v3d:not(.v3d-compact) .v3d-hwnote { left: auto; right: 1rem; transform: none; max-width: 30rem; }
+.v3d:not(.v3d-compact) .v3d-hwnote { top: auto; bottom: 1rem; left: 1rem; transform: none; max-width: min(34rem, calc(100% - 34rem)); }
 
 /* embedded in the car view: the panel already names the car, so the readout is a strip */
 .v3d-compact .v3d-readout { top: 0.6rem; left: 0.6rem; width: auto; max-width: calc(100% - 1.2rem); gap: 0.45rem; padding: 0.55rem 0.7rem 0.5rem; }
@@ -152,9 +156,28 @@
 .v3d-compact .v3d-btn .kbd { display: none; }
 .v3d-compact .v3d-hw { max-width: 11rem; padding: 0.3rem 0.45rem; }
 .v3d-compact .hw-sub { display: none; }
-.v3d-compact .v3d-hwnote { top: auto; bottom: 3.4rem; right: 0.6rem; left: auto; transform: none; max-width: 22rem; }
+.v3d-compact .v3d-hwnote, .v3d-compact .hw-long { display: none !important; }
+/* the car view already shows every number: in X-ray the strip steps aside for the labels */
+.v3d-compact.is-xray .v3d-readout { display: none; }
+.v3d-compact .hw-name { font-size: 0.86rem; }
+.v3d-compact .hw-stage { font-size: 0.82rem; }
 
 @media (prefers-reduced-motion: reduce) { .r-bar i { transition: none; } }
+
+/* narrow windows (a phone or a half-width window): the readout becomes a top strip */
+@media (max-width: 760px) {
+  .v3d:not(.v3d-compact) .v3d-readout { top: 0.6rem; left: 0.6rem; right: 0.6rem; width: auto; max-width: none; gap: 0.5rem; padding: 0.6rem 0.75rem; }
+  .v3d:not(.v3d-compact) .r-body, .v3d:not(.v3d-compact) .r-tyres, .v3d:not(.v3d-compact) .r-grid [data-k="heading"] { display: none; }
+  .v3d:not(.v3d-compact) .r-speed-v { font-size: 2.2rem; }
+  .v3d-keys, .v3d:not(.v3d-compact) .v3d-hwnote { display: none; }
+  .v3d-dock { left: 0.6rem; right: 0.6rem; bottom: 0.6rem; justify-content: space-between; }
+  .v3p-bar { padding: 0.5rem 0.75rem; }
+  .v3p-bar .bar-note { display: none; }
+  .v3p .shell { gap: 0.6rem; padding: 0 0.75rem; }
+  .v3p .brand-text span, .v3p .shell .link-text, .v3p .shell-link[href="../flow/"], .v3p .theme-toggle span { display: none; }
+  .v3p .brand-text strong { font-size: 0.93rem; white-space: normal; }
+  .v3d-btn .kbd, .v3p-car .kbd { display: none; }
+}
 
 /* ---------- the /3d/ page ---------- */
 .v3p { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }

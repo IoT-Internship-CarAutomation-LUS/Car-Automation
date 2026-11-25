@@ -450,10 +450,11 @@ export function buildCar(type, color, opts = {}) {
     B(lip, false).userData.part = "trim";
   }
   // a centre high-mounted stop lamp on cars with a roof
-  if (sp.glass) {
-    const r1 = sp.glass[2];
+  if (sp.glass && type !== "supercar") {
+    // just inside the top of the rear glass
+    const r1 = sp.glass[2], r0 = sp.glass[3], k = 0.12;
     const c = new THREE.Mesh(new RoundedBoxGeometry(0.03, 0.03, 0.32, 1, 0.01), m.tail);
-    c.position.set(r1[0] - 0.07, r1[1] - 0.025, 0);
+    c.position.set(r1[0] + (r0[0] - r1[0]) * k - 0.02, r1[1] + (r0[1] - r1[1]) * k, 0);
     B(c, false).userData.part = "lamp";
   }
 

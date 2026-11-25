@@ -40,6 +40,19 @@ http://localhost:8000/flow/ (also linked as **How data flows** in the fleet head
 - Keys: Left / Right = previous / next stage, Space = walk through (about 6 s per stage), 1 to 8 = jump.
 - Stages 1 to 4 are rebuilt from each real packet (our cars send packets, not ELM327 text) and say so; stages 5 to 8 show the actual packet. Unsupported values show the honest path: NO DATA → None → FF → null → "Not supported".
 
+## Level 3 (optional): the 3D view (/3d/)
+
+http://localhost:8000/3d/ (also **3D** in the fleet header). One car at a time, moved **only by its telemetry**: the wheels turn at the packet's road speed, the front wheels steer from the change in GPS heading, the brake lights follow `vehicle.brake`, the body dips under braking and squats under acceleration, the road scrolls at the real speed and the compass rose turns with the heading. Each tyre has a TPMS ring (green, amber, red at the fleet's alert limits; grey where no TPMS is fitted). The bodies are generic shapes built in code, not models of the real cars.
+
+- **Pick a car:** the buttons under the header, or keys **1** to **9**. A console car appears as soon as it connects. Link straight to one with `/3d/#car=corolla`.
+- **Camera:** drag to orbit, scroll to zoom. **C** chase, **S** side, **T** top, **R** reset. An idle car slowly orbits after 6 s (it holds still while the mouse is over the view).
+- **X** = **Show our hardware**: the body turns see-through and shows the OBD-II port under the dashboard (driver's side) with the ELM327, the Bluetooth link to the Raspberry Pi 4 on the dashboard, the NEO-6M antenna under the windscreen, and a pulse per packet going out to the backend. Placement is illustrative. **Each label opens that stage on /flow/.**
+- **Inside the car view:** "3D view" in the *Engine and speed* panel swaps the gauges for the same 3D view; "Gauges" swaps back. Nothing 3D loads until it is pressed.
+- Honest states to point at: the **Fronx** and **Omni** brake lights stay dark and the readout says *Brake: Unknown (not found on CAN bus)*; the Fronx says *TPMS not fitted*. **Corolla puncture** (press P) turns its front-left ring red (use the chase or default view: FL is on the far side in the side view).
+- Needs WebGL (any laptop GPU; ~60 fps at 1080p on the review laptop). Without it the page says so and the 2D views keep working.
+
+**Where it fits in the talk:** as a 30 s closer after live driving (4:00), or during it: open `/3d/` on the projector, pick the console car while the examiner drives, and the wheels, brake lights and pedal bars follow their phone. Press **X** to show where the real kit sits, and click the ELM327 label to jump back into /flow/ if asked how the data gets out of the car.
+
 ## Backups
 
 - **No second device or the network fails:** open http://localhost:8000/drive/ in a **second browser window** on the same laptop, side by side with the fleet view (Win + Left / Win + Right).
@@ -63,6 +76,7 @@ The flow page fits best **right after the fleet view and before live driving**: 
 python demo/tests/verify_dashboard.py                 # Level 1, demo running
 python demo/tests/verify_level2.py                    # Level 2 + map/card sizes, demo running
 python demo/tests/verify_flow.py                      # /flow/ page, demo running
+python demo/tests/verify_level3.py                    # /3d/ + embedded 3D view, demo running
 python demo/tests/test_flow_roundtrip.py              # reconstruction round trip (no browser)
 python demo/obd-flow/build_snippets.py                # re-extract the code shown on /flow/ (--check to verify)
 python backend/tests/dry_run.py                       # 74 checks (add --stream with port 8000 free)

@@ -228,6 +228,7 @@ export async function createView(container, opts = {}) {
     b.querySelector("span").textContent = st.xrayOn ? "Hide our hardware" : "Show our hardware";
     q(".v3d-hwlayer").hidden = !st.xrayOn;
     q(".v3d-hwnote").hidden = !st.xrayOn;
+    root.classList.toggle("is-xray", st.xrayOn);
     if (st.xrayOn && (st.statusWord === "moving")) { /* keep the camera where the presenter put it */ }
   }
 
@@ -237,10 +238,12 @@ export async function createView(container, opts = {}) {
     const k = st.car ? Math.max(0.92, st.car.dims.L / 4.2) : 1;
     const p = PRESETS[name] || PRESETS.hero;
     const out = new THREE.Vector3(p[0] * k, p[1] * (name === "top" ? k : Math.min(k, 1.1)), p[2] * k);
-    if (compact) out.multiplyScalar(name === "top" ? 1.0 : 0.92);
+    if (compact) out.multiplyScalar(name === "top" ? 1.0 : 1.04);
     return out.add(controls.target);
   }
+  const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)");
   function flyTo(name, ms = 750) {
+    if (reduceMotion && reduceMotion.matches) ms = 0;     // camera jumps instead of flying
     const to = presetPos(name);
     st.lastInteract = performance.now();
     controls.autoRotate = false;
@@ -271,7 +274,7 @@ export async function createView(container, opts = {}) {
     // keep the whole car in frame on narrow canvases
     camera.fov = (compact ? 30 : 32) * clamp(1.55 / camera.aspect, 1, 1.6);
     // nudge the picture right (and down when embedded) so the readout card never sits on the car
-    if (camera.aspect > 1.2) camera.setViewOffset(w, h, -w * (compact ? 0.14 : 0.06), compact ? -h * 0.07 : 0, w, h);
+    if (camera.aspect > 1.2) camera.setViewOffset(w, h, -w * (compact ? 0.09 : 0.06), compact ? -h * 0.06 : 0, w, h);
     else camera.clearViewOffset();
     camera.updateProjectionMatrix();
   }
@@ -437,7 +440,7 @@ export async function createView(container, opts = {}) {
   const hwLayer = q(".v3d-hwlayer");
   hwLayer.innerHTML = `<svg class="v3d-leaders" aria-hidden="true"></svg>` + HW_ITEMS.map((it) =>
     `<a class="v3d-hw" data-k="${it.key}" href="${flowBase}#car=${encodeURIComponent(opts.carId || "fronx")}&stage=${it.stage}" title="Open ${it.n === "GPS" ? "the GPS branch" : "stage " + it.n} on How data flows">
-      <span class="hw-name">${esc(it.name)}</span><span class="hw-sub">${esc(it.sub)}</span><span class="hw-stage">${it.n === "GPS" ? "GPS branch" : "Stage " + it.n} on How data flows</span></a>`).join("");
+      <span class="hw-name">${esc(it.name)}</span><span class="hw-sub">${esc(it.sub)}</span><span class="hw-stage">${it.n === "GPS" ? "GPS branch" : "Stage " + it.n}<span class="hw-long"> on How data flows</span></span></a>`).join("");
   const proj = new THREE.Vector3();
   function placeLabels() {
     if (!st.xrayOn || !st.xray || !st.car) return;
@@ -450,8 +453,11 @@ export async function createView(container, opts = {}) {
       proj.copy(a).applyMatrix4(st.car.inner.matrixWorld).project(camera);
       const x = ((proj.x + 1) / 2) * w, y = ((1 - proj.y) / 2) * h;
       const el = hwLayer.querySelector(`[data-k=${it.key}]`);
-      const off = compact ? 46 : 78;
-      const lx = clamp(x + it.dir[0] * off, 8, w - 8), ly = clamp(y + it.dir[1] * off * 0.8, 8, h - 8);
+      const off = compact ? 40 : 78;
+      const bottom = compact ? 52 : 8;   // keep clear of the camera buttons
+      const ew = el.offsetWidth || 160, eh = el.offsetHeight || 60;
+      const lx = clamp(x + it.dir[0] * off, it.dir[0] > 0 ? 8 : ew + 8, it.dir[0] > 0 ? w - ew - 8 : w - 8);
+      const ly = clamp(y + it.dir[1] * off * 0.8, it.dir[1] > 0 ? 8 : eh + 8, it.dir[1] > 0 ? h - eh - bottom : h - bottom);
       el.style.transform = `translate(${lx}px, ${ly}px) translate(${it.dir[0] > 0 ? "0" : "-100%"}, ${it.dir[1] > 0 ? "0" : "-100%"})`;
       el.hidden = proj.z > 1;
       el.href = `${flowBase}#car=${encodeURIComponent(st.id || "fronx")}&stage=${it.stage}`;
@@ -517,7 +523,7 @@ export async function createView(container, opts = {}) {
     }
 
     // idle cars get a slow orbit after a few seconds without input
-    const idle = st.vDisp < 0.5 && !st.tween && !st.hover && now - st.lastInteract > 6000;
+    const idle = st.vDisp < 0.5 && !st.tween && !st.hover && now - st.lastInteract > 6000 && !(reduceMotion && reduceMotion.matches);
     controls.autoRotate = idle;
     stepTween(now);
     controls.update(dt);
@@ -630,7 +636,7 @@ function shellHtml(compact) {
     <div class="v3d-wait" hidden><strong>Waiting for packets</strong><span>The car appears as soon as its first packet arrives.</span></div>
     <div class="v3d-msg" hidden></div>
     <div class="v3d-hwlayer" hidden></div>
-    <p class="v3d-hwnote" hidden>${icon("i-info")}Illustrative placement, kit drawn larger than life. Click a label to open that stage on How data flows.</p>
+    <p class="v3d-hwnote" hidden>${icon("i-info")}${compact ? "Illustrative placement. Labels open How data flows." : "Illustrative placement, kit drawn larger than life. Click a label to open that stage on How data flows."}</p>
     <div class="v3d-tip" role="tooltip" hidden></div>
     <div class="v3d-dock">
       <div class="v3d-presets" role="group" aria-label="Camera">

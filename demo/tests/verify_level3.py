@@ -103,6 +103,7 @@ def run(args):
         ctx, pg, errs = new_page(b)
         pg.goto(BASE + "/3d/")
         pg.wait_for_function("window.__view3d && window.__view3d.packets > 1", timeout=15000)
+        pg.evaluate("window.FT.sendControl('reset_all')")   # a scenario left on by another suite would skew the checks
         pg.wait_for_timeout(800)
         gpu = pg.evaluate("(() => { const gl = document.createElement('canvas').getContext('webgl2'); const e = gl && gl.getExtension('WEBGL_debug_renderer_info'); return e ? gl.getParameter(e.UNMASKED_RENDERER_WEBGL) : 'unknown'; })()")
         print(f"  WebGL renderer: {gpu}")
@@ -178,6 +179,7 @@ def run(args):
         check("Corolla brake false -> tail lamps dim, not off", t is not None and dbg(pg, "brakeLight") == "dim" and 0.1 < dbg(pg, "tailEmissive") < 0.6)
 
         # puncture scenario -> FL ring red
+        wait_until(lambda: set(dbg(pg, "rings").values()) == {"green"}, 20, 0.2)
         s = snap(pg)
         check("Corolla rings start green", set(s["rings"].values()) == {"green"}, str(s["rings"]))
         pg.evaluate("window.FT.sendControl('corolla_puncture')")
