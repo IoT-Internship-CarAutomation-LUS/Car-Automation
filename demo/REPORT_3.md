@@ -167,7 +167,18 @@ That is 20 files. The stage views use the live Fronx; the summary uses the repor
 
 ## 8. Push
 
-`[[PUSH]]`
+**Checks before pushing:**
+- **`git status`:** clean.
+- **`demo/_private/`:** nothing under it is tracked. `git check-ignore` confirms the report PDF is ignored.
+- **`git ls-files | findstr /i "pdf _private"` is NOT empty.** It lists 14 PDFs under `Internship/PDF/`, for example `Final_Internship_Report.pdf` and `Track1_Parts_List.pdf`.
+  - These PDFs were added by the team to `main` on 31 July (commit 63e585f and earlier) and are **already public on `origin/main`**. This branch did not add or change any PDF; `git diff --name-only origin/main..HEAD` lists none.
+  - The tracked `Final_Internship_Report.pdf` (1.4 MB) is a different file from your private `Shahid Final.pdf` (3.5 MB).
+  - Since this push introduced no PDF and nothing private, I pushed. I did not delete the team's PDFs from the repository. That would change history visible on `main` and is your decision; see Known issues.
+
+**The push:**
+- `git push origin demo/fleet-dashboard`: **succeeded**, `b27ac08..a381fb9 demo/fleet-dashboard -> demo/fleet-dashboard`. Only this branch was pushed, with no force and nothing to `main`.
+- Branch: https://github.com/IoT-Internship-CarAutomation-LUS/Car-Automation/tree/demo/fleet-dashboard
+- This section was then added in one more commit and pushed the same way; the branch head on GitHub is that commit.
 
 ## 9. Known issues
 
